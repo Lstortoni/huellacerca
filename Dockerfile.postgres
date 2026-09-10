@@ -1,0 +1,5 @@
+FROM postgres:16
+
+# Compatibilidad con clientes que usan el alias histórico de Buenos Aires.
+RUN ln -sf /usr/share/zoneinfo/America/Argentina/Buenos_Aires /usr/share/zoneinfo/America/Buenos_Aires
+

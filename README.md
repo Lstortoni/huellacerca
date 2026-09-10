@@ -1,54 +1,66 @@
-# Huella Cerca
+﻿# Huella Cerca
 
-Aplicación móvil para mascotas perdidas/encontradas y recomendaciones de servicios, inicialmente para Argentina.
+App de mascotas perdidas/encontradas y recomendaciones de servicios, inicialmente para Argentina.
 
-## Estado actual
+## Desarrollo con Docker
 
-Estructura inicial de la API ASP.NET Core 8, siguiendo la organización de IdeasProyectos. Todavía no incluye entidades, autenticación, EF Core, base de datos ni Docker. Flutter se incorporará posteriormente en `mobile/`.
+La API se restaura, compila y ejecuta dentro de contenedores Linux. No hace falta ejecutar dotnet en Windows para este flujo. Requiere Docker Desktop iniciado.
 
-## Backend
+Desde esta carpeta, para una instalación nueva, copiar `.env.example` como `.env` y ajustar los valores locales. No sobrescribir un `.env` existente. El archivo `.env` está excluido de Git; la contraseña de ejemplo es únicamente para desarrollo local.
 
-La solución está en `backend/HuellaCerca.sln`:
+```powershell
+docker compose up -d --build
+```
+
+- API: http://localhost:5080/health (respuesta esperada: HTTP 200, Healthy).
+- PostgreSQL desde Windows: localhost:5435. Usuario, contraseña y base definidos en `.env`.
+- Desde la API: huellacerca_db:5432.
+
+Los puertos se publican únicamente en la interfaz local de la PC. Para probar posteriormente desde un teléfono físico habrá que configurar el acceso desde la red local.
+
+Compose crea el grupo `huellacerca`, con servicios `huellacerca_api` y `huellacerca_db`, red y volumen propios, independientes de IdeasProyectos. PostgreSQL conserva sus datos en `huellacerca_huellacerca_db_data`. La API espera a que PostgreSQL esté disponible.
+
+### Después de modificar la API
+
+```powershell
+docker compose up -d --build --no-deps huellacerca_api
+```
+
+Esto reconstruye y recrea la API sin reiniciar la base. Docker reutiliza las capas de compilación que no cambiaron.
+
+### Estado, logs y detención
+
+```powershell
+docker compose ps
+docker compose logs --tail 100 -f huellacerca_api
+docker compose down
+```
+
+`down` conserva el volumen de datos. No usar `down -v` salvo que se quiera borrar la base local. Las variables POSTGRES inicializan una base nueva; cambiar la contraseña en `.env` no cambia la de una base ya creada.
+
+## Estructura de la API
+
+Solución: `backend/HuellaCerca.sln`, basada en la organización de IdeasProyectos.
 
 | Proyecto | Responsabilidad |
 | --- | --- |
-| HuellaCerca.API | Endpoints HTTP y configuración de la aplicación. |
-| HuellaCerca.MODEL | Entidades del dominio, pendientes de definir. |
+| HuellaCerca.API | Endpoints HTTP y configuración. |
+| HuellaCerca.MODEL | Entidades pendientes de definir. |
 | HuellaCerca.CONTRACT | DTO de solicitudes y respuestas. |
-| HuellaCerca.INTERFACES | Interfaces de servicios y acceso a datos. |
+| HuellaCerca.INTERFACES | Interfaces de servicios y persistencia. |
 | HuellaCerca.SERVICES | Lógica de negocio. |
-| HuellaCerca.INFRASTRUCTURE | Implementaciones de persistencia e integraciones; alojará EF Core. |
+| HuellaCerca.INFRASTRUCTURE | Persistencia e integraciones; alojará EF Core. |
 
-API referencia SERVICES e INFRASTRUCTURE; ambas referencian INTERFACES, que referencia MODEL y CONTRACT. Las capas están vacías hasta definir las primeras funcionalidades.
+API referencia SERVICES e INFRASTRUCTURE; ambas referencian INTERFACES, que referencia MODEL y CONTRACT.
 
-### Ejecutar desde PowerShell
+`backend/Dockerfile` construye la solución con el SDK .NET 8 y publica la API en una imagen de runtime. `Dockerfile.postgres` usa PostgreSQL 16 y conserva el alias de zona horaria de Buenos Aires del proyecto de referencia.
 
-Requiere el SDK .NET 8.0.420 (o un parche posterior de la misma banda), seleccionado en `backend/global.json`.
+## Estado y próximos pasos
 
-Desde la carpeta raíz:
+La API y PostgreSQL se ejecutan en Docker. La cadena de conexión está preparada, pero la API todavía no la consume: no hay DbContext, modelos, migraciones, autenticación ni Swagger. `/health` comprueba que la API responde, no la conexión a PostgreSQL.
 
-```powershell
-cd backend
-dotnet build HuellaCerca.sln
-dotnet run --project HuellaCerca.API --launch-profile http
-```
+Después de definir el modelo incorporaremos EF Core, registro/login JWT, catálogos geográficos e importador GeoRef adaptados de IdeasProyectos. Las migraciones y el importador también deberán ejecutarse dentro de Docker.
 
-En otra terminal:
+El proyecto Flutter está en `mobile/`, con la pantalla del contador como primera práctica. Consultar `mobile/README.md` para ejecutarlo y entender sus archivos. Todavía no se conecta a la API; cuando incorporemos datos, consumirá exclusivamente sus endpoints.
 
-```powershell
-Invoke-WebRequest http://localhost:5080/health
-```
-
-La respuesta esperada es HTTP 200 con el texto `Healthy`. El endpoint verifica que el proceso responde; todavía no comprueba una base de datos.
-
-## Próximos pasos
-
-- Definir el modelo de usuarios y publicaciones.
-- Adaptar registro, login JWT y catálogos de provincias/localidades desde IdeasProyectos.
-- Adaptar el importador GeoRef para cargar el catálogo en la base propia.
-- Agregar EF Core, migraciones y PostgreSQL.
-- Dockerizar la API y PostgreSQL con nombres, volúmenes y puertos propios.
-- Crear la app Flutter y conectarla exclusivamente a la API.
-
-.NET 8 se conserva inicialmente para mantener coherencia con el proyecto de referencia. Revisar la versión objetivo y su soporte antes del despliegue.
-
+.NET 8 se conserva inicialmente por coherencia con el proyecto de referencia. Revisar la versión objetivo y su soporte antes del despliegue.

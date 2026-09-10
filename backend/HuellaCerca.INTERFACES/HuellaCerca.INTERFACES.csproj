@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../HuellaCerca.MODEL/HuellaCerca.MODEL.csproj" />
+    <ProjectReference Include="../HuellaCerca.CONTRACT/HuellaCerca.CONTRACT.csproj" />
+  </ItemGroup>
+</Project>
+

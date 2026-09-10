@@ -1,0 +1,52 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuellaCerca.API", "HuellaCerca.API\HuellaCerca.API.csproj", "{449CDB94-AF81-44F0-B2FE-49163EE87081}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuellaCerca.MODEL", "HuellaCerca.MODEL\HuellaCerca.MODEL.csproj", "{7278B856-5546-47B2-87FA-5E196A2282D1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuellaCerca.CONTRACT", "HuellaCerca.CONTRACT\HuellaCerca.CONTRACT.csproj", "{966ED560-B683-40A6-AF74-34429717EEEC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuellaCerca.INTERFACES", "HuellaCerca.INTERFACES\HuellaCerca.INTERFACES.csproj", "{0A65E62B-5A65-4E0C-8537-5F2E948F7F97}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuellaCerca.SERVICES", "HuellaCerca.SERVICES\HuellaCerca.SERVICES.csproj", "{73778282-787F-46D6-B6B5-B725396F6872}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuellaCerca.INFRASTRUCTURE", "HuellaCerca.INFRASTRUCTURE\HuellaCerca.INFRASTRUCTURE.csproj", "{657E8BE0-DA7D-41B3-9FAF-B813EA9B18F8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{449CDB94-AF81-44F0-B2FE-49163EE87081}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{449CDB94-AF81-44F0-B2FE-49163EE87081}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{449CDB94-AF81-44F0-B2FE-49163EE87081}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{449CDB94-AF81-44F0-B2FE-49163EE87081}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7278B856-5546-47B2-87FA-5E196A2282D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7278B856-5546-47B2-87FA-5E196A2282D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7278B856-5546-47B2-87FA-5E196A2282D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7278B856-5546-47B2-87FA-5E196A2282D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{966ED560-B683-40A6-AF74-34429717EEEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{966ED560-B683-40A6-AF74-34429717EEEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{966ED560-B683-40A6-AF74-34429717EEEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{966ED560-B683-40A6-AF74-34429717EEEC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A65E62B-5A65-4E0C-8537-5F2E948F7F97}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A65E62B-5A65-4E0C-8537-5F2E948F7F97}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A65E62B-5A65-4E0C-8537-5F2E948F7F97}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A65E62B-5A65-4E0C-8537-5F2E948F7F97}.Release|Any CPU.Build.0 = Release|Any CPU
+		{73778282-787F-46D6-B6B5-B725396F6872}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{73778282-787F-46D6-B6B5-B725396F6872}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{73778282-787F-46D6-B6B5-B725396F6872}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{73778282-787F-46D6-B6B5-B725396F6872}.Release|Any CPU.Build.0 = Release|Any CPU
+		{657E8BE0-DA7D-41B3-9FAF-B813EA9B18F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{657E8BE0-DA7D-41B3-9FAF-B813EA9B18F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{657E8BE0-DA7D-41B3-9FAF-B813EA9B18F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{657E8BE0-DA7D-41B3-9FAF-B813EA9B18F8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

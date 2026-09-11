@@ -13,6 +13,7 @@ docker compose up -d --build
 ```
 
 - API: http://localhost:5080/health (respuesta esperada: HTTP 200, Healthy).
+- Swagger: http://localhost:5080/swagger (habilitado en Development).
 - PostgreSQL desde Windows: localhost:5435. Usuario, contraseña y base definidos en `.env`.
 - Desde la API: huellacerca_db:5432.
 
@@ -26,7 +27,7 @@ Compose crea el grupo `huellacerca`, con servicios `huellacerca_api` y `huellace
 docker compose up -d --build --no-deps huellacerca_api
 ```
 
-Esto reconstruye y recrea la API sin reiniciar la base. Docker reutiliza las capas de compilación que no cambiaron.
+Esto reconstruye y recrea la API sin reiniciar la base. Docker reutiliza las capas de compilación que no cambiaron. Si cambió el modelo y hay migraciones nuevas, usar el flujo de ubicación descrito abajo antes de reiniciar la API.
 
 ### Estado, logs y detención
 
@@ -45,11 +46,12 @@ Solución: `backend/HuellaCerca.sln`, basada en la organización de IdeasProyect
 | Proyecto | Responsabilidad |
 | --- | --- |
 | HuellaCerca.API | Endpoints HTTP y configuración. |
-| HuellaCerca.MODEL | Entidades pendientes de definir. |
+| HuellaCerca.MODEL | Ubicación, Usuario, Mascotero, sesiones, rubros, prestadores y recomendaciones. |
 | HuellaCerca.CONTRACT | DTO de solicitudes y respuestas. |
 | HuellaCerca.INTERFACES | Interfaces de servicios y persistencia. |
 | HuellaCerca.SERVICES | Lógica de negocio. |
-| HuellaCerca.INFRASTRUCTURE | Persistencia e integraciones; alojará EF Core. |
+| HuellaCerca.INFRASTRUCTURE | DbContext, configuraciones, migraciones y repositorio EF Core. |
+| HuellaCerca.GeoRefImporter | Ejecutable para importar GeoRef o aplicar migraciones. |
 
 API referencia SERVICES e INFRASTRUCTURE; ambas referencian INTERFACES, que referencia MODEL y CONTRACT.
 
@@ -57,9 +59,89 @@ API referencia SERVICES e INFRASTRUCTURE; ambas referencian INTERFACES, que refe
 
 ## Estado y próximos pasos
 
-La API y PostgreSQL se ejecutan en Docker. La cadena de conexión está preparada, pero la API todavía no la consume: no hay DbContext, modelos, migraciones, autenticación ni Swagger. `/health` comprueba que la API responde, no la conexión a PostgreSQL.
+La API consulta los catálogos mediante EF Core. `/health` comprueba que la API responde, no la conexión a PostgreSQL. Las consultas de ubicación son públicas y de solo lectura.
 
-Después de definir el modelo incorporaremos EF Core, registro/login JWT, catálogos geográficos e importador GeoRef adaptados de IdeasProyectos. Las migraciones y el importador también deberán ejecutarse dentro de Docker.
+Usuario y Mascotero tienen relación uno a uno. Registro, login JWT, renovación, cierre de sesión y recomendaciones básicas están implementados. Todavía no hay verificación de email, recuperación de contraseña, publicaciones de mascotas, comentarios ni me gusta. La app Flutter sigue con el ejemplo inicial.
+
+## Ubicación: primera carga
+
+`docker compose up -d --build` inicia PostgreSQL, ejecuta `huellacerca_migrations` y levanta la API solo si las migraciones terminan correctamente. El contenedor de migraciones termina con código 0; es normal verlo detenido. No descarga GeoRef en cada arranque.
+
+Para cargar o actualizar el catálogo:
+
+```powershell
+docker compose --profile tools run --rm --build huellacerca_importer
+```
+
+Fuente: [GeoRef de Argentina](https://www.argentina.gob.ar/georef). Se utiliza el recurso de **localidades censales**, igual que en IdeasProyectos; no representa todos los barrios o asentamientos. El importador pagina usando `inicio` y `max`, verifica totales e identificadores y descarga todo antes de modificar la base. Guarda los cambios en una transacción y serializa importaciones concurrentes mediante un bloqueo de PostgreSQL.
+
+Las ejecuciones posteriores actualizan por GeorefId y conservan los UUID locales. No elimina registros ausentes del catálogo recibido. Los registros presentes se marcan activos; una desactivación manual puede revertirse al importar. Si la descarga o validación falla, termina con error sin aplicar una carga parcial. Reintenta fallos HTTP transitorios hasta dos veces.
+
+### Endpoints
+
+- `GET /api/paises`: países activos.
+- `GET /api/provincias?paisCodigo=AR`: provincias activas; AR es el valor predeterminado.
+- `GET /api/localidades?provinciaId=UUID&busqueda=cordoba&pagina=1&tamanoPagina=20`: localidades activas, búsqueda parcial sin distinguir acentos o mayúsculas.
+
+Localidades devuelve `items`, `total`, `pagina` y `tamanoPagina`. ProvinciaId es obligatorio; tamaño de página entre 1 y 100, por defecto 20. Los parámetros inválidos devuelven 400; una provincia inexistente o inactiva, 404. Una búsqueda sin coincidencias devuelve 200 con una lista vacía. Los DTO no exponen propiedades de navegación ni ciclos de EF.
+
+### Crear una migración futura sin dotnet en Windows
+
+Después de cambiar modelos/configuraciones:
+
+```powershell
+docker compose --profile tools build huellacerca_tools
+docker compose run --rm --no-deps huellacerca_tools ef migrations add NombreDelCambio --project HuellaCerca.INFRASTRUCTURE --startup-project HuellaCerca.INFRASTRUCTURE --output-dir Migrations --msbuildprojectextensionspath /tmp/huellacerca-build/HuellaCerca.INFRASTRUCTURE/obj
+docker compose up -d --build
+```
+
+La herramienta usa un montaje de `backend/` para guardar la migración en el repositorio. EF Core y dotnet-ef se ejecutan dentro de Docker. Revisar y versionar las migraciones generadas antes del despliegue.
+
+Las herramientas usan `/tmp/huellacerca-build` para sus archivos intermedios, separados de `obj/` y `bin/` de Windows. Esto evita que VS Code intente resolver paquetes mediante rutas Linux. El argumento `--msbuildprojectextensionspath` debe acompañar los comandos de EF Core.
+
+Para IntelliSense en VS Code sobre Windows, restaurar las referencias locales con `dotnet restore backend/HuellaCerca.sln` desde la raíz (requiere SDK local). Esto descarga referencias del editor; no compila ni ejecuta la API. Si el editor conserva diagnósticos antiguos, usar **Developer: Reload Window**.
+
+### Pruebas del bloque
+
+Con la API levantada y el catálogo importado:
+
+```powershell
+docker compose run --rm --no-deps huellacerca_tests
+```
+
+Ejecuta pruebas HTTP de solo lectura desde un contenedor Python, sin instalar Python ni ejecutar scripts locales en Windows. Verifica catálogo, filtro por provincia, búsqueda con/sin acentos, paginación, respuesta vacía, Swagger y errores 400/404.
+
+### Recorrido del código
+
+1. `API/Controllers/UbicacionController.cs` recibe HTTP y valida parámetros.
+2. `SERVICES/UbicacionService.cs` coordina la consulta y transforma entidades a DTO.
+3. `INTERFACES/` define los contratos del servicio y repositorio.
+4. `INFRASTRUCTURE/Repositories/UbicacionRepository.cs` consulta con EF Core sin seguimiento de cambios.
+5. `INFRASTRUCTURE/Data/AppDbContext.cs` y `Configuration/` describen tablas, relaciones e índices.
+6. `MODEL/` contiene entidades; `CONTRACT/Ubicacion/`, los datos de entrada y salida.
+7. `GeoRefImporter/GeorefImporter.cs` descarga, valida y guarda el catálogo.
+
+Las rutas anteriores son relativas a los proyectos `backend/HuellaCerca.*`.
+
+## Registro, sesiones y recomendaciones
+
+Consultar [la guía de endpoints y ejemplos](docs/api-comunidad.md).
+
+En una instalación nueva, configurar `JWT_KEY` en `.env` con un secreto aleatorio de al menos 32 bytes. El valor de `.env.example` es un marcador que debe reemplazarse; la API lo rechaza. En este equipo ya se generó una clave local, sin incluirla en Git.
+
+Valores iniciales: JWT de 15 minutos y refresh de 30 días. La renovación conserva el vencimiento absoluto de la sesión, rota el refresh y rechaza su reutilización. No hay renovación infinita. Cada login crea una sesión independiente.
+
+Para ejecutar las pruebas HTTP de comunidad:
+
+```powershell
+docker compose run --rm --no-deps huellacerca_tests python /tests/test_comunidad.py
+```
+
+Estas pruebas crean dos cuentas y prestadores identificados con `hc-test-...` y eliminan las recomendaciones que publican. Las cuentas y fichas de prueba quedan en la base local. No ejecutar contra producción. El contenedor de pruebas recibe la clave JWT local para probar tokens firmados con vencimiento, emisor y audiencia incorrectos; no imprime tokens ni contraseñas.
+
+El cierre de sesión revoca los refresh de esa sesión. El JWT ya emitido puede funcionar hasta su vencimiento. En cada petición autenticada también se consulta si el usuario sigue activo y si corresponde al mascotero del token; desactivar al usuario bloquea el acceso sin esperar el vencimiento.
+
+Los endpoints de autenticación tienen un límite de 60 solicitudes por minuto por IP y devuelven 429 al superarlo. Es un límite local en memoria; una instalación con varias réplicas necesitará control compartido. La API local usa HTTP; el despliegue externo deberá servir autenticación mediante HTTPS.
 
 El proyecto Flutter está en `mobile/`, con la pantalla del contador como primera práctica. Consultar `mobile/README.md` para ejecutarlo y entender sus archivos. Todavía no se conecta a la API; cuando incorporemos datos, consumirá exclusivamente sus endpoints.
 

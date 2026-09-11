@@ -31,13 +31,71 @@ services:
     depends_on:
       huellacerca_db:
         condition: service_healthy
+      huellacerca_migrations:
+        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:8080
+      Jwt__Key: ${JWT_KEY:?Definir JWT_KEY en .env}
+      Jwt__Issuer: HuellaCercaApi
+      Jwt__Audience: HuellaCercaMobile
+      Jwt__AccessMinutes: "15"
+      Jwt__RefreshDays: "30"
       ConnectionStrings__DefaultConnection: "Host=huellacerca_db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
     ports:
       - "127.0.0.1:${API_HOST_PORT:-5080}:8080"
 
-volumes:
-  huellacerca_db_data:
+  huellacerca_migrations:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: importer
+    depends_on:
+      huellacerca_db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=huellacerca_db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+    command: ["--migrate-only"]
+    restart: "no"
 
+  huellacerca_importer:
+    profiles: ["tools"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: importer
+    depends_on:
+      huellacerca_migrations:
+        condition: service_completed_successfully
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=huellacerca_db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+    restart: "no"
+
+  huellacerca_tools:
+    profiles: ["tools"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: tools
+    working_dir: /workspace
+    volumes:
+      - ./backend:/workspace
+      - huellacerca_nuget:/root/.nuget/packages
+    environment:
+      HUELLACERCA_BUILD_ROOT: /tmp/huellacerca-build
+      ConnectionStrings__DefaultConnection: "Host=huellacerca_db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+    entrypoint: ["dotnet"]
+
+  huellacerca_tests:
+    profiles: ["tools"]
+    image: python:3.12-slim
+    volumes:
+      - ./scripts:/tests:ro
+    environment:
+      API_BASE_URL: http://huellacerca_api:8080
+      JWT_TEST_KEY: ${JWT_KEY}
+    command: ["python", "/tests/test_ubicacion.py"]
+
+volumes:
+  huellacerca_nuget:
+  huellacerca_db_data:

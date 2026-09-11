@@ -1,12 +1,91 @@
+using HuellaCerca.INFRASTRUCTURE.Data;
+using HuellaCerca.INFRASTRUCTURE.Repositories;
+using HuellaCerca.INTERFACES.Repositories;
+using HuellaCerca.INTERFACES.Services;
+using HuellaCerca.SERVICES;
+using Microsoft.EntityFrameworkCore;
+using HuellaCerca.API.Errors;
+using HuellaCerca.API.Security;
+using HuellaCerca.INTERFACES.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
+using System.Threading.RateLimiting;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<AppExceptionHandler>();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT" });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement {
+        [new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } }] = Array.Empty<string>()
+    });
+});
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Falta ConnectionStrings__DefaultConnection.")));
+builder.Services.AddScoped<IUbicacionRepository, UbicacionRepository>();
+builder.Services.AddScoped<IUbicacionService, UbicacionService>();
+builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IRecomendacionRepository, RecomendacionRepository>();
+builder.Services.AddScoped<IRecomendacionService, RecomendacionService>();
+builder.Services.AddSingleton<ICredenciales, Credenciales>();
+builder.Services.AddOptions<JwtSettings>().Bind(builder.Configuration.GetSection("Jwt"))
+    .Validate(x => Encoding.UTF8.GetByteCount(x.Key) >= 32 && !x.Key.StartsWith("CAMBIAR_") && !string.IsNullOrWhiteSpace(x.Issuer) && !string.IsNullOrWhiteSpace(x.Audience), "Configurar Jwt:Key (mínimo 32 bytes), Issuer y Audience.")
+    .Validate(x => x.AccessMinutes is >= 1 and <= 60 && x.RefreshDays is >= 1 and <= 90, "Duración JWT o refresh fuera de rango.")
+    .ValidateOnStart();
+var jwt = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.MapInboundClaims = false;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true, ValidIssuer = jwt.Issuer,
+        ValidateAudience = true, ValidAudience = jwt.Audience,
+        ValidateLifetime = true, RequireExpirationTime = true,
+        RequireSignedTokens = true, ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
+        ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+        ClockSkew = TimeSpan.FromSeconds(5)
+    };
+    options.Events = new JwtBearerEvents { OnTokenValidated = async context =>
+    {
+        if (!Guid.TryParse(context.Principal?.FindFirst("sub")?.Value, out var userId) ||
+            !Guid.TryParse(context.Principal?.FindFirst("mascoteroId")?.Value, out var mascoteroId))
+        { context.Fail("Identidad inválida."); return; }
+        var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+        if (!await db.Usuarios.AnyAsync(x => x.Id == userId && x.MascoteroId == mascoteroId && x.Activo, context.HttpContext.RequestAborted))
+            context.Fail("Usuario inactivo o inexistente.");
+    }};
+});
+builder.Services.AddAuthorization();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = 429;
+    options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
 
 var app = builder.Build();
+app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.MapControllers();
 app.MapHealthChecks("/health");
 
 app.Run();
-

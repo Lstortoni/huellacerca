@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuellaCerca.SERVICES", "Hue
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuellaCerca.INFRASTRUCTURE", "HuellaCerca.INFRASTRUCTURE\HuellaCerca.INFRASTRUCTURE.csproj", "{657E8BE0-DA7D-41B3-9FAF-B813EA9B18F8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HuellaCerca.GeoRefImporter", "HuellaCerca.GeoRefImporter\HuellaCerca.GeoRefImporter.csproj", "{BE54D8EB-C264-4B4C-819A-F02AA0699896}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{657E8BE0-DA7D-41B3-9FAF-B813EA9B18F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{657E8BE0-DA7D-41B3-9FAF-B813EA9B18F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{657E8BE0-DA7D-41B3-9FAF-B813EA9B18F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE54D8EB-C264-4B4C-819A-F02AA0699896}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE54D8EB-C264-4B4C-819A-F02AA0699896}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE54D8EB-C264-4B4C-819A-F02AA0699896}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE54D8EB-C264-4B4C-819A-F02AA0699896}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

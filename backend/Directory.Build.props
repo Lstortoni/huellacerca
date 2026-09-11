@@ -3,6 +3,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Las herramientas Docker no deben sobrescribir los assets que usa VS Code en Windows. -->
+    <BaseIntermediateOutputPath Condition="'$(HUELLACERCA_BUILD_ROOT)' != ''">$(HUELLACERCA_BUILD_ROOT)/$(MSBuildProjectName)/obj/</BaseIntermediateOutputPath>
+    <BaseOutputPath Condition="'$(HUELLACERCA_BUILD_ROOT)' != ''">$(HUELLACERCA_BUILD_ROOT)/$(MSBuildProjectName)/bin/</BaseOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);**/obj/**;**/bin/**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>
-

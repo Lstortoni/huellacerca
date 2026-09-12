@@ -61,7 +61,7 @@ API referencia SERVICES e INFRASTRUCTURE; ambas referencian INTERFACES, que refe
 
 La API consulta los catálogos mediante EF Core. `/health` comprueba que la API responde, no la conexión a PostgreSQL. Las consultas de ubicación son públicas y de solo lectura.
 
-Usuario y Mascotero tienen relación uno a uno. Registro, login JWT, renovación, cierre de sesión y recomendaciones básicas están implementados. Todavía no hay verificación de email, recuperación de contraseña, publicaciones de mascotas, comentarios ni me gusta. La app Flutter sigue con el ejemplo inicial.
+Usuario y Mascotero tienen relación uno a uno. Registro, login JWT, renovación, cierre de sesión y recomendaciones básicas están implementados. Todavía no hay verificación de email, recuperación de contraseña, publicaciones de mascotas, comentarios ni me gusta. La app Flutter ya consulta la API y muestra un selector de provincias con carga y reintento ante errores.
 
 ## Ubicación: primera carga
 
@@ -143,6 +143,6 @@ El cierre de sesión revoca los refresh de esa sesión. El JWT ya emitido puede 
 
 Los endpoints de autenticación tienen un límite de 60 solicitudes por minuto por IP y devuelven 429 al superarlo. Es un límite local en memoria; una instalación con varias réplicas necesitará control compartido. La API local usa HTTP; el despliegue externo deberá servir autenticación mediante HTTPS.
 
-El proyecto Flutter está en `mobile/`, con la pantalla del contador como primera práctica. Consultar `mobile/README.md` para ejecutarlo y entender sus archivos. Todavía no se conecta a la API; cuando incorporemos datos, consumirá exclusivamente sus endpoints.
+El proyecto Flutter está en `mobile/`, con una primera pantalla conectada a `/health` y al catálogo de provincias. Consultar [la guía de Flutter](mobile/README.md) para ejecutarlo, configurar la URL y entender el recorrido pantalla → servicio → cliente HTTP → API → DTO. La sesión en la app se incorporará en el siguiente bloque.
 
 .NET 8 se conserva inicialmente por coherencia con el proyecto de referencia. Revisar la versión objetivo y su soporte antes del despliegue.

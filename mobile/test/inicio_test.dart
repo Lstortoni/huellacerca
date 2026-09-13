@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:huella_cerca/app.dart';
 
+import 'support/auth_fakes.dart';
+
 http.Response provincias() => http.Response(
   jsonEncode([
     {'id': 'provincia-1', 'nombre': 'Córdoba', 'paisCodigo': 'AR'},
@@ -26,7 +28,12 @@ void main() {
       expect(request.url.queryParameters, {'paisCodigo': 'AR'});
       return provincias();
     });
-    await tester.pumpWidget(HuellaCercaApp(httpClient: client));
+    await tester.pumpWidget(
+      HuellaCercaApp(
+        sessionStorage: MemorySessionStorage(),
+        httpClient: client,
+      ),
+    );
     expect(find.text('Cargando provincias…'), findsOneWidget);
     health.complete(http.Response('Healthy', 200));
     await tester.pumpAndSettle();
@@ -47,7 +54,12 @@ void main() {
       }
       return provincias();
     });
-    await tester.pumpWidget(HuellaCercaApp(httpClient: client));
+    await tester.pumpWidget(
+      HuellaCercaApp(
+        sessionStorage: MemorySessionStorage(),
+        httpClient: client,
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Reintentar'), findsOneWidget);
     await tester.tap(find.text('Reintentar'));
@@ -63,7 +75,12 @@ void main() {
       (r) async =>
           http.Response(r.url.path == '/health' ? 'Healthy' : '[]', 200),
     );
-    await tester.pumpWidget(HuellaCercaApp(httpClient: client));
+    await tester.pumpWidget(
+      HuellaCercaApp(
+        sessionStorage: MemorySessionStorage(),
+        httpClient: client,
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Todavía no hay provincias disponibles.'), findsOneWidget);
     expect(find.text('Volver a consultar'), findsOneWidget);
@@ -74,7 +91,10 @@ void main() {
   ) async {
     final response = Completer<http.Response>();
     await tester.pumpWidget(
-      HuellaCercaApp(httpClient: MockClient((_) => response.future)),
+      HuellaCercaApp(
+        sessionStorage: MemorySessionStorage(),
+        httpClient: MockClient((_) => response.future),
+      ),
     );
     await tester.pumpWidget(const SizedBox());
     response.complete(http.Response('Healthy', 200));

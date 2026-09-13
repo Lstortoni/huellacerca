@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:huella_cerca/core/network/api_client.dart';
 import 'package:huella_cerca/core/network/api_exception.dart';
-import 'package:huella_cerca/features/ubicacion/services/ubicacion_service.dart';
+import 'package:huella_cerca/services/ubicacion_service.dart';
 
 void main() {
   test('HTTP 503 produce error de servicio sin exponer el cuerpo', () async {

@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/network/api_client.dart';
-import '../../../core/network/api_exception.dart';
-import '../../ubicacion/models/provincia_dto.dart';
-import '../../ubicacion/services/ubicacion_service.dart';
+import '../core/network/api_client.dart';
+import '../core/network/api_exception.dart';
+import '../models/provincia_dto.dart';
+import '../services/ubicacion_service.dart';
+import '../services/auth_service.dart';
+import '../widgets/barra_superior.dart';
 
 class InicioPage extends StatefulWidget {
-  const InicioPage({super.key, required this.api, required this.ubicacion});
+  const InicioPage({
+    super.key,
+    required this.api,
+    required this.ubicacion,
+    required this.auth,
+  });
+  final AuthService auth;
   final ApiClient api;
   final UbicacionService ubicacion;
 
@@ -66,10 +74,7 @@ class _InicioPageState extends State<InicioPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Huella Cerca'),
-        backgroundColor: Colors.transparent,
-      ),
+      appBar: BarraSuperior(auth: widget.auth),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
@@ -111,7 +116,7 @@ class _InicioPageState extends State<InicioPage> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Elegí dónde estás. Más adelante usaremos esta información para tu registro.',
+                      'Elegí tu provincia.',
                     ),
                     const SizedBox(height: 20),
                     if (_cargando) ...[

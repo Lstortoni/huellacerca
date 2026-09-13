@@ -143,6 +143,6 @@ El cierre de sesión revoca los refresh de esa sesión. El JWT ya emitido puede 
 
 Los endpoints de autenticación tienen un límite de 60 solicitudes por minuto por IP y devuelven 429 al superarlo. Es un límite local en memoria; una instalación con varias réplicas necesitará control compartido. La API local usa HTTP; el despliegue externo deberá servir autenticación mediante HTTPS.
 
-El proyecto Flutter está en `mobile/`, con una primera pantalla conectada a `/health` y al catálogo de provincias. Consultar [la guía de Flutter](mobile/README.md) para ejecutarlo, configurar la URL y entender el recorrido pantalla → servicio → cliente HTTP → API → DTO. La sesión en la app se incorporará en el siguiente bloque.
+El proyecto Flutter está en `mobile/`, con inicio público y una barra de cuenta compartida. Incluye ingreso, registro con provincia/localidad, perfil de solo lectura, almacenamiento seguro de sesión, renovación y cierre de sesión. Consultar [la guía de Flutter](mobile/README.md) para ejecutarlo, configurar la URL, entender sus carpetas y probar el recorrido completo contra la API local.
 
 .NET 8 se conserva inicialmente por coherencia con el proyecto de referencia. Revisar la versión objetivo y su soporte antes del despliegue.

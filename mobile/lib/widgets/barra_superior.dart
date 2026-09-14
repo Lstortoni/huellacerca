@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../services/auth_service.dart';
+import '../services/contracts/auth_service.dart';
 
 /// Componente compartido: se coloca en el appBar de cada Scaffold.
 class BarraSuperior extends StatelessWidget implements PreferredSizeWidget {

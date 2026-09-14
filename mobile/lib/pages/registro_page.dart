@@ -4,8 +4,8 @@ import '../core/network/api_exception.dart';
 import '../models/auth_dto.dart';
 import '../models/provincia_dto.dart';
 import '../models/localidad_dto.dart';
-import '../services/auth_service.dart';
-import '../services/ubicacion_service.dart';
+import '../services/contracts/auth_service.dart';
+import '../services/contracts/ubicacion_service.dart';
 import '../widgets/barra_superior.dart';
 import '../widgets/selector_localidad.dart';
 

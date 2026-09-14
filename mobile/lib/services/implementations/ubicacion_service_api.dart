@@ -1,12 +1,14 @@
-import '../core/network/api_client.dart';
-import '../core/network/api_exception.dart';
-import '../models/provincia_dto.dart';
-import '../models/localidad_dto.dart';
+import '../../core/network/api_client.dart';
+import '../../core/network/api_exception.dart';
+import '../../models/provincia_dto.dart';
+import '../../models/localidad_dto.dart';
+import '../contracts/ubicacion_service.dart';
 
-class UbicacionService {
-  const UbicacionService(this._api);
+class UbicacionServiceApi implements UbicacionService {
+  const UbicacionServiceApi(this._api);
   final ApiClient _api;
 
+  @override
   Future<LocalidadesPagina> getLocalidades(
     String provinciaId, {
     String busqueda = '',
@@ -36,6 +38,7 @@ class UbicacionService {
     }
   }
 
+  @override
   Future<List<ProvinciaDto>> getProvincias() async {
     final data = await _api.getJson(
       'api/provincias',

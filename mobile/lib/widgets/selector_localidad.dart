@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/network/api_exception.dart';
 import '../models/localidad_dto.dart';
-import '../services/ubicacion_service.dart';
+import '../services/contracts/ubicacion_service.dart';
 
 /// Diálogo reutilizable con búsqueda y páginas; no descarga todo el catálogo.
 class SelectorLocalidad extends StatefulWidget {

@@ -4,10 +4,10 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:huella_cerca/core/network/api_client.dart';
+import 'package:huella_cerca/core/network/http_api_client.dart';
 import 'package:huella_cerca/core/network/api_exception.dart';
 import 'package:huella_cerca/models/auth_dto.dart';
-import 'package:huella_cerca/services/auth_service.dart';
+import 'package:huella_cerca/services/implementations/auth_service_api.dart';
 
 import 'support/auth_fakes.dart';
 
@@ -22,7 +22,7 @@ void main() {
     'Login guarda sesión sin contraseña y me manda solo el access token',
     () async {
       final storage = MemorySessionStorage();
-      final api = ApiClient(
+      final api = HttpApiClient(
         baseUrl: 'http://localhost/',
         client: MockClient((r) async {
           if (r.url.path.endsWith('login')) {
@@ -38,7 +38,7 @@ void main() {
           return json(usuarioJson());
         }),
       );
-      final auth = AuthService(api, storage);
+      final auth = AuthServiceApi(api, storage);
       addTearDown(() {
         auth.dispose();
         api.close();
@@ -52,7 +52,7 @@ void main() {
   );
 
   test('Registro manda DTO completo y deja sesión iniciada', () async {
-    final api = ApiClient(
+    final api = HttpApiClient(
       baseUrl: 'http://localhost/',
       client: MockClient((r) async {
         expect(r.url.path, '/api/auth/register');
@@ -62,7 +62,7 @@ void main() {
         return json(sesionJson(), 201);
       }),
     );
-    final auth = AuthService(api, MemorySessionStorage());
+    final auth = AuthServiceApi(api, MemorySessionStorage());
     addTearDown(() {
       auth.dispose();
       api.close();
@@ -87,7 +87,7 @@ void main() {
       final storage = MemorySessionStorage()
         ..value = sesionTexto(expired: true);
       var refreshes = 0;
-      final api = ApiClient(
+      final api = HttpApiClient(
         baseUrl: 'http://localhost/',
         client: MockClient((r) async {
           if (r.url.path.endsWith('refresh')) {
@@ -100,7 +100,7 @@ void main() {
           return json(usuarioJson());
         }),
       );
-      final auth = AuthService(api, storage);
+      final auth = AuthServiceApi(api, storage);
       addTearDown(() {
         auth.dispose();
         api.close();
@@ -115,7 +115,7 @@ void main() {
   test('Dos 401 simultáneos comparten refresh y reintentan una vez', () async {
     var rejecting = false, refreshes = 0;
     final refresh = Completer<http.Response>();
-    final api = ApiClient(
+    final api = HttpApiClient(
       baseUrl: 'http://localhost/',
       client: MockClient((r) async {
         if (r.url.path.endsWith('refresh')) {
@@ -128,7 +128,7 @@ void main() {
         return json(usuarioJson());
       }),
     );
-    final auth = AuthService(
+    final auth = AuthServiceApi(
       api,
       MemorySessionStorage()..value = sesionTexto(),
     );
@@ -149,14 +149,14 @@ void main() {
   test('Refresh rechazado limpia sesión y no entra en bucle', () async {
     var refreshes = 0;
     final storage = MemorySessionStorage()..value = sesionTexto(expired: true);
-    final api = ApiClient(
+    final api = HttpApiClient(
       baseUrl: 'http://localhost/',
       client: MockClient((r) async {
         refreshes++;
         return json({'title': 'La sesión no se puede renovar.'}, 401);
       }),
     );
-    final auth = AuthService(api, storage);
+    final auth = AuthServiceApi(api, storage);
     addTearDown(() {
       auth.dispose();
       api.close();
@@ -174,14 +174,14 @@ void main() {
       var calls = 0;
       final storage = MemorySessionStorage()
         ..value = sesionTexto(refreshExpired: true);
-      final api = ApiClient(
+      final api = HttpApiClient(
         baseUrl: 'http://localhost/',
         client: MockClient((r) async {
           calls++;
           throw http.ClientException('sin red');
         }),
       );
-      final auth = AuthService(api, storage);
+      final auth = AuthServiceApi(api, storage);
       addTearDown(() {
         auth.dispose();
         api.close();
@@ -199,7 +199,7 @@ void main() {
 
   test('Logout borra sesión local aunque el servidor no responda', () async {
     final storage = MemorySessionStorage()..value = sesionTexto();
-    final api = ApiClient(
+    final api = HttpApiClient(
       baseUrl: 'http://localhost/',
       client: MockClient((r) async {
         if (r.url.path.endsWith('logout')) {
@@ -209,7 +209,7 @@ void main() {
         return json(usuarioJson());
       }),
     );
-    final auth = AuthService(api, storage);
+    final auth = AuthServiceApi(api, storage);
     addTearDown(() {
       auth.dispose();
       api.close();
@@ -223,7 +223,7 @@ void main() {
 
   test('401 de credenciales no intenta refresh', () async {
     var calls = 0;
-    final api = ApiClient(
+    final api = HttpApiClient(
       baseUrl: 'http://localhost/',
       client: MockClient((r) async {
         calls++;
@@ -231,7 +231,7 @@ void main() {
         return json({'title': 'Email o contraseña inválidos.'}, 401);
       }),
     );
-    final auth = AuthService(api, MemorySessionStorage());
+    final auth = AuthServiceApi(api, MemorySessionStorage());
     addTearDown(() {
       auth.dispose();
       api.close();

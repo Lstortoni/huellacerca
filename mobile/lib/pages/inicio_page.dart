@@ -1,192 +1,139 @@
 import 'package:flutter/material.dart';
 
-import '../core/network/api_client.dart';
-import '../core/network/api_exception.dart';
-import '../models/provincia_dto.dart';
-import '../services/ubicacion_service.dart';
-import '../services/auth_service.dart';
+import '../services/contracts/auth_service.dart';
 import '../widgets/barra_superior.dart';
+import '../widgets/tarjeta_inicio.dart';
 
-class InicioPage extends StatefulWidget {
-  const InicioPage({
-    super.key,
-    required this.api,
-    required this.ubicacion,
-    required this.auth,
-  });
+/// Inicio público. Escucha la sesión para agregar las acciones de participación.
+class InicioPage extends StatelessWidget {
+  const InicioPage({super.key, required this.auth});
   final AuthService auth;
-  final ApiClient api;
-  final UbicacionService ubicacion;
 
   @override
-  State<InicioPage> createState() => _InicioPageState();
-}
-
-class _InicioPageState extends State<InicioPage> {
-  bool _cargando = true;
-  String? _error;
-  List<ProvinciaDto> _provincias = [];
-  ProvinciaDto? _seleccionada;
-
-  @override
-  void initState() {
-    super.initState();
-    _cargar();
-  }
-
-  Future<void> _cargar() async {
-    setState(() {
-      _cargando = true;
-      _error = null;
-    });
-    try {
-      final health = await widget.api.getText('health');
-      if (health.trim() != 'Healthy') {
-        throw const ApiException(
-          'El servicio no está disponible en este momento.',
-        );
-      }
-      final provincias = await widget.ubicacion.getProvincias();
-      if (!mounted) {
-        return; // La petición puede terminar después de cerrar la pantalla.
-      }
-      setState(() {
-        _provincias = provincias;
-        _seleccionada = null;
-        _cargando = false;
-      });
-    } on ApiException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = error.message;
-        _cargando = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'No pudimos cargar la información. Volvé a intentar.';
-        _cargando = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      appBar: BarraSuperior(auth: widget.auth),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: CircleAvatar(
-                radius: 34,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.pets,
-                  size: 34,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Más cerca de quienes\nnos necesitan.',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Una comunidad para ayudar a las mascotas y compartir buenas experiencias.',
-              style: TextStyle(fontSize: 17),
-            ),
-            const SizedBox(height: 32),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
+  Widget build(BuildContext context) => Scaffold(
+    appBar: BarraSuperior(auth: auth),
+    body: SafeArea(
+      child: ListenableBuilder(
+        listenable: auth,
+        builder: (context, _) {
+          final theme = Theme.of(context);
+          final conSesion = auth.autenticado && !auth.restaurando;
+          final nombre = auth.usuario?.mascotero.nombre.trim() ?? '';
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Empecemos por tu provincia',
-                      style: theme.textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Elegí tu provincia.',
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: CircleAvatar(
+                        radius: 30,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        child: Icon(
+                          Icons.pets,
+                          size: 32,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 20),
-                    if (_cargando) ...[
+                    Text(
+                      conSesion
+                          ? (nombre.isEmpty ? 'Hola' : 'Hola, $nombre')
+                          : 'Más cerca de quienes nos necesitan.',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      conSesion ? '¿Qué querés hacer hoy?' : 'Una comunidad para ayudar a las mascotas y compartir buenas experiencias.',
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 28),
+                    TarjetaInicio(
+                      titulo: 'Buscar mascotas',
+                      descripcion: 'Mascotas perdidas y encontradas.',
+                      icono: Icons.pets_outlined,
+                      onTap: () => Navigator.of(context).pushNamed('/mascotas'),
+                    ),
+                    TarjetaInicio(
+                      titulo: 'Servicios recomendados',
+                      descripcion:
+                          'Veterinarias, peluquerías, paseadores y más.',
+                      icono: Icons.storefront_outlined,
+                      onTap: () =>
+                          Navigator.of(context).pushNamed('/servicios'),
+                    ),
+                    const SizedBox(height: 16),
+                    if (auth.restaurando) ...[
                       const LinearProgressIndicator(),
                       const SizedBox(height: 12),
-                      const Text('Cargando provincias…'),
-                    ] else if (_error != null) ...[
-                      Text(_error!, semanticsLabel: _error),
-                      const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed: _cargar,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Reintentar'),
+                      const Text('Recuperando tu sesión…'),
+                    ] else if (conSesion) ...[
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          'Participá en la comunidad',
+                          style: theme.textTheme.titleLarge,
+                        ),
                       ),
-                    ] else if (_provincias.isEmpty) ...[
-                      const Text('Todavía no hay provincias disponibles.'),
-                      TextButton(
-                        onPressed: _cargar,
-                        child: const Text('Volver a consultar'),
+                      const SizedBox(height: 16),
+                      TarjetaInicio(
+                        titulo: 'Publicar mascota',
+                        descripcion:
+                            'Avisá si perdiste o encontraste una mascota.',
+                        icono: Icons.campaign_outlined,
+                        onTap: () =>
+                            Navigator.of(context)
+                                .pushNamed('/mascotas/publicar'),
+                      ),
+                      TarjetaInicio(
+                        titulo: 'Recomendar un servicio',
+                        descripcion:
+                            'Compartí una buena experiencia con la comunidad.',
+                        icono: Icons.rate_review_outlined,
+                        onTap: () =>
+                            Navigator.of(context)
+                                .pushNamed('/servicios/recomendar'),
                       ),
                     ] else ...[
-                      InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Provincia',
-                          border: OutlineInputBorder(),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<ProvinciaDto>(
-                            isExpanded: true,
-                            value: _seleccionada,
-                            hint: const Text('Seleccioná una provincia'),
-                            items: _provincias
-                                .map(
-                                  (p) => DropdownMenuItem(
-                                    value: p,
-                                    child: Text(
-                                      p.nombre,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) =>
-                                setState(() => _seleccionada = value),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
                       Text(
-                        '${_provincias.length} provincias disponibles',
-                        style: theme.textTheme.bodySmall,
+                        'Sumate a la comunidad',
+                        style: theme.textTheme.titleLarge,
                       ),
-                      if (_seleccionada != null) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          'Elegiste ${_seleccionada!.nombre}.',
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w600,
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Ingresá o registrate para publicar y compartir recomendaciones.',
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        children: [
+                          FilledButton(
+                            onPressed: () =>
+                                Navigator.of(context).pushNamed('/login'),
+                            child: const Text('Ingresar'),
                           ),
-                        ),
-                      ],
+                          OutlinedButton(
+                            onPressed: () =>
+                                Navigator.of(context).pushNamed('/registro'),
+                            child: const Text('Registrarse'),
+                          ),
+                        ],
+                      ),
                     ],
                   ],
                 ),
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
 }

@@ -1,0 +1,15 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import 'session_storage.dart';
+
+class SecureSessionStorage implements SessionStorage {
+  SecureSessionStorage({this.key = 'huella_cerca_session'});
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final String key;
+  @override
+  Future<String?> read() => _storage.read(key: key);
+  @override
+  Future<void> write(String value) => _storage.write(key: key, value: value);
+  @override
+  Future<void> clear() => _storage.delete(key: key);
+}

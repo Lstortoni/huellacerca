@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:huella_cerca/app.dart';
+
+import 'support/test_app.dart';
+
 import 'package:huella_cerca/models/provincia_dto.dart';
-import 'package:huella_cerca/core/network/api_client.dart';
-import 'package:huella_cerca/services/ubicacion_service.dart';
+import 'package:huella_cerca/core/network/http_api_client.dart';
+import 'package:huella_cerca/services/implementations/ubicacion_service_api.dart';
 import 'package:huella_cerca/widgets/selector_localidad.dart';
 
 import 'support/auth_fakes.dart';
@@ -45,12 +47,12 @@ void main() {
       return json({}, 404);
     });
     await tester.pumpWidget(
-      HuellaCercaApp(httpClient: client, sessionStorage: storage),
+      testApp(httpClient: client, sessionStorage: storage),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Cuenta'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Registrarse'));
+    await tester.tap(find.text('Registrarse').last);
     await tester.pumpAndSettle();
     final fields = find.byType(TextFormField);
     final values = [
@@ -65,23 +67,23 @@ void main() {
       await tester.ensureVisible(fields.at(i));
       await tester.enterText(fields.at(i), values[i]);
     }
-      final province = find.byType(DropdownButtonFormField<ProvinciaDto>);
-      FocusManager.instance.primaryFocus?.unfocus();
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(province);
-      await tester.pumpAndSettle();
+    final province = find.byType(DropdownButtonFormField<ProvinciaDto>);
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(province);
+    await tester.pumpAndSettle();
     await tester.tap(province);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Córdoba').last);
     await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Elegir localidad'));
-      await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Elegir localidad'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Elegir localidad'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Villa Prueba'));
     await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Crear cuenta'));
-      await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Crear cuenta'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
     expect(sent?['localidadId'], 'l1');
@@ -115,14 +117,14 @@ void main() {
         }
       });
       await tester.pumpWidget(
-        HuellaCercaApp(httpClient: client, sessionStorage: storage),
+        testApp(httpClient: client, sessionStorage: storage),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Seleccioná una provincia'), findsOneWidget);
+      expect(find.text('Buscar mascotas'), findsOneWidget);
       await tester.tap(find.byTooltip('Cuenta'));
       await tester.pumpAndSettle();
-      expect(find.text('Registrarse'), findsOneWidget);
-      await tester.tap(find.text('Ingresar'));
+      expect(find.text('Registrarse'), findsWidgets);
+      await tester.tap(find.text('Ingresar').last);
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byType(TextFormField).at(0),
@@ -142,10 +144,10 @@ void main() {
       await tester.tap(find.text('Cerrar sesión'));
       await tester.pumpAndSettle();
       expect(storage.value, isNull);
-      expect(find.text('Seleccioná una provincia'), findsOneWidget);
+      expect(find.text('Buscar mascotas'), findsOneWidget);
       await tester.tap(find.byTooltip('Cuenta'));
       await tester.pumpAndSettle();
-      expect(find.text('Ingresar'), findsOneWidget);
+      expect(find.text('Ingresar'), findsWidgets);
     },
   );
 
@@ -162,15 +164,12 @@ void main() {
       ]);
     });
     await tester.pumpWidget(
-      HuellaCercaApp(
-        httpClient: client,
-        sessionStorage: MemorySessionStorage(),
-      ),
+      testApp(httpClient: client, sessionStorage: MemorySessionStorage()),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Cuenta'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Registrarse'));
+    await tester.tap(find.text('Registrarse').last);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Crear cuenta'),
@@ -192,7 +191,7 @@ void main() {
     'Localidades permite buscar y avanzar más allá de la primera página',
     (tester) async {
       final requests = <Map<String, String>>[];
-      final api = ApiClient(
+      final api = HttpApiClient(
         baseUrl: 'http://localhost/',
         client: MockClient((r) async {
           requests.add(r.url.queryParameters);
@@ -214,7 +213,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: SelectorLocalidad(
-              ubicacion: UbicacionService(api),
+              ubicacion: UbicacionServiceApi(api),
               provinciaId: 'p1',
             ),
           ),

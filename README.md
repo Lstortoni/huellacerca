@@ -1,4 +1,4 @@
-﻿# Huella Cerca
+# Huella Cerca
 
 App de mascotas perdidas/encontradas y recomendaciones de servicios, inicialmente para Argentina.
 
@@ -61,7 +61,7 @@ API referencia SERVICES e INFRASTRUCTURE; ambas referencian INTERFACES, que refe
 
 La API consulta los catálogos mediante EF Core. `/health` comprueba que la API responde, no la conexión a PostgreSQL. Las consultas de ubicación son públicas y de solo lectura.
 
-Usuario y Mascotero tienen relación uno a uno. Registro, login JWT, renovación, cierre de sesión y recomendaciones básicas están implementados. Todavía no hay verificación de email, recuperación de contraseña, publicaciones de mascotas, comentarios ni me gusta. La app Flutter ya consulta la API y muestra un selector de provincias con carga y reintento ante errores.
+Usuario y Mascotero tienen relación uno a uno. Registro, login JWT, renovación, cierre de sesión y recomendaciones básicas están implementados. Todavía no hay verificación de email, recuperación de contraseña, publicaciones de mascotas, comentarios ni me gusta. La app Flutter tiene inicio público con tarjetas y agrega acciones de participación cuando hay sesión. Los cuatro accesos de búsqueda/publicación llevan temporalmente a un aviso de Próximamente; autenticación, perfil y ubicación del registro están conectados a la API.
 
 ## Ubicación: primera carga
 

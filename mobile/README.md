@@ -1,6 +1,6 @@
-﻿# Huella Cerca — app Flutter
+# Huella Cerca — app Flutter
 
-Inicio público conectado a `/health` y `/api/provincias?paisCodigo=AR`, con carga y reintento. El icono de cuenta abre ingreso y registro; con sesión muestra perfil y cierre de sesión. La selección de provincia del inicio vive en memoria. El registro tiene su propia selección de provincia/localidad y crea la cuenta mediante la API.
+Inicio con tarjetas públicas de búsqueda y acciones de participación según la sesión. No consulta `/health` ni provincias para mostrarse. El icono de cuenta abre ingreso y registro; con sesión muestra perfil y cierre de sesión. El registro conserva la selección de provincia/localidad y crea la cuenta mediante la API.
 
 ## Dónde se programa
 
@@ -12,17 +12,25 @@ lib/
   app.dart
   core/
     config/api_config.dart
+    di/service_registration.dart
     network/api_client.dart
+    network/http_api_client.dart
     network/api_exception.dart
     storage/session_storage.dart
+    storage/secure_session_storage.dart
   pages/
     inicio_page.dart
     login_page.dart
     registro_page.dart
     perfil_page.dart
+    funcion_pendiente_page.dart
   services/
-    ubicacion_service.dart
-    auth_service.dart
+    contracts/
+      ubicacion_service.dart
+      auth_service.dart
+    implementations/
+      ubicacion_service_api.dart
+      auth_service_api.dart
   models/
     provincia_dto.dart
     localidad_dto.dart
@@ -30,34 +38,46 @@ lib/
   widgets/
     barra_superior.dart
     selector_localidad.dart
+    tarjeta_inicio.dart
 ```
 
-- `main.dart`: entrada. `runApp` inicia `HuellaCercaApp`.
-- `app.dart`: crea cliente HTTP y servicio de ubicación, configura tema y pantalla inicial con `MaterialApp`. Tiene responsabilidades similares al arranque y configuración de MAUI. Cierra el cliente cuando se destruye el widget raíz.
+- `main.dart`: entrada. Ejecuta `configurarServicios()` y luego `runApp(const HuellaCercaApp())`.
+- `app.dart`: obtiene los servicios con `getIt<Contrato>()`, restaura la sesión y configura tema, inicio y rutas. Entrega servicios por constructor a las páginas.
+- `core/di/service_registration.dart`: registra contratos e implementaciones con `registerLazySingleton`. Cada servicio se crea al pedirlo por primera vez y se reutiliza durante la ejecución.
 - `core/`: piezas compartidas, como configuración y comunicación HTTP.
 - `pages/`: pantallas, con sus widgets visuales y su estado.
-- `services/`: servicios que consultan la API, reutilizables por las pantallas.
+- `services/contracts/`: operaciones y propiedades que conocen las páginas; no contienen la implementación.
+- `services/implementations/`: implementaciones API de esos contratos; dependen a su vez del contrato `ApiClient`.
 - `models/`: DTO que representan los datos enviados o recibidos de la API.
 - `widgets/`: piezas visuales reutilizables. Una página también es un widget, pero representa una pantalla completa. La barra se inserta en `Scaffold.appBar` y el selector de localidades es un diálogo.
 - `provincia_dto.dart`: equivalente a un DTO C#. Define `id`, `nombre` y `paisCodigo`; `fromJson` convierte y valida el objeto recibido de la API.
-- `ubicacion_service.dart`: conoce el endpoint y devuelve `Future<List<ProvinciaDto>>`, comparable con `Task<List<ProvinciaDto>>` en C#.
-- `api_client.dart`: realiza HTTP, decodifica JSON y transforma errores de red, tiempo de espera y estado HTTP en `ApiException`.
-- `inicio_page.dart`: widgets visuales y estado de pantalla: carga, error, lista y selección.
+- `ubicacion_service.dart`: contrato que devuelve `Future<List<ProvinciaDto>>`, comparable con `Task<List<ProvinciaDto>>` en C#. `ubicacion_service_api.dart` conoce los endpoints y convierte los DTO.
+- `api_client.dart`: contrato de transporte, sin tipos del paquete HTTP. `http_api_client.dart` realiza HTTP, decodifica JSON y transforma errores en `ApiException`.
+- `inicio_page.dart`: inicio que escucha el contrato de sesión y muestra dos o cuatro tarjetas. `tarjeta_inicio.dart` es el componente visual reutilizado por cada acceso.
 
 Estos nombres de carpetas son convenciones elegidas para organizar el código, no una obligación de Flutter. Los DTO Dart representan el contrato JSON, sin referenciar las clases C# ni las entidades EF.
 
 ## Flujo al abrir la app
 
-1. `main()` llama `runApp(const HuellaCercaApp())`.
-2. `app.dart` crea dependencias y muestra `InicioPage`.
-3. `initState()` de la pantalla llama `_cargar()` al crearse.
-4. Consulta `/health`, que comprueba que la API responde, no la base.
-5. `UbicacionService.getProvincias()` pide el catálogo mediante `ApiClient`.
-6. `ProvinciaDto.fromJson()` transforma cada elemento en un objeto Dart.
-7. La pantalla recibe la lista y usa `setState()` para actualizar la interfaz.
-8. Ante un error muestra un mensaje y permite reintentar.
+1. `main()` registra los servicios y ejecuta `runApp(const HuellaCercaApp())`.
+2. `app.dart` inicia la restauración de sesión y muestra `InicioPage(auth: getIt<AuthService>())`.
+3. Inicio recibe solo el contrato `AuthService`. `ListenableBuilder` escucha sus notificaciones.
+4. Siempre muestra Buscar mascotas y Servicios recomendados. Mientras restaura la sesión, muestra un indicador sin bloquear esos accesos.
+5. Sin sesión agrega la invitación a ingresar/registrarse. Con sesión muestra el saludo y las tarjetas Publicar mascota y Recomendar un servicio.
+6. Al tocar una tarjeta, su callback `onTap` llama `Navigator.pushNamed` con la ruta correspondiente.
+7. `app.dart` resuelve la ruta y muestra su página destino.
+8. Login y registro vuelven al inicio al completarse; `notifyListeners()` actualiza tanto el inicio como la barra. Logout vuelve a mostrar las dos tarjetas públicas.
 
-`build()` describe la interfaz según el estado. `setState()` avisa que cambió ese estado; Flutter reconstruye los widgets correspondientes. `mounted` comprueba que la pantalla sigue existiendo después de esperar una respuesta asíncrona.
+| Tarjeta | Ruta | Estado de esta versión |
+| --- | --- | --- |
+| Buscar mascotas | `/mascotas` | Aviso de Próximamente. |
+| Servicios recomendados | `/servicios` | Aviso de Próximamente. |
+| Publicar mascota | `/mascotas/publicar` | Visible con sesión; aviso de Próximamente. |
+| Recomendar un servicio | `/servicios/recomendar` | Visible con sesión; aviso de Próximamente. |
+
+Los cuatro destinos usan `FuncionPendientePage`, con título, icono y descripción propios y un botón para volver al inicio. No consultan ni crean datos. La API de recomendaciones ya existe, pero su interfaz se conectará después. El módulo de mascotas aún está pendiente. Los futuros endpoints de escritura también deberán exigir autenticación; mostrar u ocultar tarjetas no sustituye esa protección.
+
+La pantalla de inicio es un `StatelessWidget`: su información cambiante está en `AuthService`, que avisa a `ListenableBuilder`. No necesita su propia carga de provincias ni estado local. La disposición vertical permite desplazarse y limita el ancho en pantallas grandes.
 
 ## Configuración y ejecución
 
@@ -102,9 +122,43 @@ Durante `flutter run`, guardar y presionar `r` aplica hot reload; `R` reinicia e
 
 ## Sesión y navegación
 
-`app.dart` crea una sola instancia de `AuthService` y la entrega a las páginas. Conserva `InicioPage` como `home`; registra las rutas `/login`, `/registro` y `/perfil`. La barra usa `Navigator.pushNamed` para abrirlas. Al ingresar o registrarse se vuelve al inicio. Cerrar sesión vuelve al inicio público.
+`configurarServicios()` registra `AuthServiceApi` como implementación compartida de `AuthService`. `app.dart` entrega ese contrato a las páginas, conserva `InicioPage` como `home` y registra las rutas `/login`, `/registro` y `/perfil`. La barra usa `Navigator.pushNamed` para abrirlas. Al ingresar o registrarse se vuelve al inicio. Cerrar sesión vuelve al inicio público.
 
-`AuthService` extiende `ChangeNotifier`: guarda el estado de sesión y avisa cuando cambia. `BarraSuperior` escucha esos avisos con `ListenableBuilder` y actualiza las opciones. La barra no hace llamadas HTTP ni almacena tokens.
+`AuthService` es un contrato que implementa `Listenable`: incluye operaciones, propiedades de lectura y notificaciones de sesión. `AuthServiceApi` extiende `ChangeNotifier` e implementa ese contrato. `BarraSuperior` escucha el contrato con `ListenableBuilder` y actualiza las opciones; no conoce la clase API, no hace llamadas HTTP ni almacena tokens.
+
+## Registro y sustitución de servicios con get_it
+
+El registro está en `core/di/service_registration.dart`. Su papel es parecido al registro de interfaces en `Program.cs` de .NET:
+
+```dart
+getIt.registerLazySingleton<AuthService>(
+  () => AuthServiceApi(getIt<ApiClient>(), getIt<SessionStorage>()),
+  dispose: (auth) => auth.dispose(),
+);
+```
+
+En `app.dart` se obtiene el contrato y se entrega a la página:
+
+```dart
+'/login': (_) => LoginPage(auth: getIt<AuthService>()),
+```
+
+Las páginas, widgets y servicios no buscan objetos globales: siguen recibiendo contratos por constructor. Solo el registro y `app.dart` usan el localizador. `get_it` no completa constructores automáticamente; las funciones registradas describen cómo crear cada objeto. No existe ya `AppDependencies`.
+
+Los servicios duran toda la ejecución. No se liberan al cambiar de página ni al desmontar el widget raíz. En pruebas se desmonta la app y se ejecuta `await getIt.reset()` para eliminar registros y llamar a los callbacks de liberación de autenticación y HTTP. El reset no borra la sesión persistida del usuario. Cada prueba configura sus propios registros; no se permite registrar dos veces un mismo tipo sin reset.
+
+`test/dependencies_test.dart` sustituye los servicios completos por mocks, sin cambiar las páginas:
+
+```dart
+getIt.registerSingleton<AuthService>(
+  AuthServiceMock(),
+  dispose: (auth) => auth.dispose(),
+);
+```
+
+Los mocks viven solo en `test/support/service_mocks.dart`. Las pruebas de HTTP usan el mismo registro real, con transporte y almacenamiento simulados. El inicio ya no necesita servicios de ubicación ni transporte HTTP; los filtros de ubicación permanecen en registro y se incorporarán a las futuras búsquedas.
+
+### Comportamiento de la implementación de sesión
 
 - `POST /api/auth/register`: formulario con nombre, apellido, email, contraseña, confirmación, teléfono opcional y localidad. Crear cuenta inicia sesión.
 - `POST /api/auth/login`: email y contraseña.

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/network/api_exception.dart';
 import '../models/auth_dto.dart';
-import '../services/auth_service.dart';
+import '../services/contracts/auth_service.dart';
 import '../widgets/barra_superior.dart';
 
 class LoginPage extends StatefulWidget {

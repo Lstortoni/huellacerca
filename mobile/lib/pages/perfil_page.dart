@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/network/api_exception.dart';
-import '../services/auth_service.dart';
+import '../services/contracts/auth_service.dart';
 import '../widgets/barra_superior.dart';
 
 class PerfilPage extends StatefulWidget {

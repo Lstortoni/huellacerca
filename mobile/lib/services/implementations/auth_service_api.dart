@@ -2,29 +2,36 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
-import '../core/network/api_client.dart';
-import '../core/network/api_exception.dart';
-import '../core/storage/session_storage.dart';
-import '../models/auth_dto.dart';
+import '../../core/network/api_client.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/storage/session_storage.dart';
+import '../../models/auth_dto.dart';
+import '../contracts/auth_service.dart';
 
 /// Estado de sesión compartido. Las páginas y la barra escuchan sus cambios.
-class AuthService extends ChangeNotifier {
-  AuthService(this._api, this._storage);
+class AuthServiceApi extends ChangeNotifier implements AuthService {
+  AuthServiceApi(this._api, this._storage);
   final ApiClient _api;
   final SessionStorage _storage;
   AuthResponse? _session;
   Future<void>? _refreshing;
+  @override
   bool restaurando = true;
+  @override
   bool ocupado = false;
+  @override
   String? aviso;
   bool _disposed = false;
   int _version = 0;
+  @override
   UsuarioDto? get usuario => _session?.usuario;
+  @override
   bool get autenticado => _session != null;
   void _notify() {
     if (!_disposed) notifyListeners();
   }
 
+  @override
   Future<void> restaurar() async {
     restaurando = true;
     aviso = null;
@@ -58,8 +65,10 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  @override
   Future<void> login(LoginRequest request) =>
       _autenticar('api/auth/login', request.toJson());
+  @override
   Future<void> registrar(RegisterRequest request) =>
       _autenticar('api/auth/register', request.toJson());
 
@@ -152,6 +161,7 @@ class AuthService extends ChangeNotifier {
   }
 
   /// Solo consultas GET protegidas: renovar y reintentar como máximo una vez.
+  @override
   Future<Object?> getProtegido(String path) async {
     final version = _version;
     if (_session == null) {
@@ -183,6 +193,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  @override
   Future<UsuarioDto> miPerfil() async {
     final version = _version;
     final data = await getProtegido('api/auth/me');
@@ -205,6 +216,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  @override
   Future<void> logout() async {
     if (ocupado || restaurando) return;
     ocupado = true;

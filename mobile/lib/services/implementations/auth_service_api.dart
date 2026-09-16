@@ -160,9 +160,25 @@ class AuthServiceApi extends ChangeNotifier implements AuthService {
     }
   }
 
-  /// Solo consultas GET protegidas: renovar y reintentar como máximo una vez.
+  /// Se reintenta únicamente un 401, nunca errores de red ni de servidor.
   @override
-  Future<Object?> getProtegido(String path) async {
+  Future<Object?> getProtegido(String path) =>
+      _protegido((token) => _api.getJson(path, accessToken: token));
+
+  @override
+  Future<Object?> postProtegido(String path, Map<String, Object?> body) =>
+      _protegido(
+        (token) =>
+            _api.enviarJson('POST', path, accessToken: token, body: body),
+      );
+
+  @override
+  Future<Object?> patchProtegido(String path) =>
+      _protegido((token) => _api.enviarJson('PATCH', path, accessToken: token));
+
+  Future<Object?> _protegido(
+    Future<Object?> Function(String token) enviar,
+  ) async {
     final version = _version;
     if (_session == null) {
       throw const ApiException('Ingresá para continuar.', statusCode: 401);
@@ -178,14 +194,20 @@ class AuthServiceApi extends ChangeNotifier implements AuthService {
     }
     final token = _session!.accessToken;
     try {
-      return await _api.getJson(path, accessToken: token);
+      return await enviar(token);
     } on ApiException catch (e) {
       if (e.statusCode != 401) rethrow;
       if (version != _version) rethrow;
       if (_session == null) rethrow;
       if (_session!.accessToken == token) await _refresh();
+      if (version != _version || _session == null) {
+        throw const ApiException(
+          'La sesión cambió. Volvé a ingresar.',
+          statusCode: 401,
+        );
+      }
       try {
-        return await _api.getJson(path, accessToken: _session!.accessToken);
+        return await enviar(_session!.accessToken);
       } on ApiException catch (retry) {
         if (retry.statusCode == 401 && version == _version) await _clear();
         rethrow;

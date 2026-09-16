@@ -51,6 +51,11 @@ class AuthServiceMock extends ChangeNotifier implements AuthService {
   @override
   Future<Object?> getProtegido(String path) async => usuarioJson();
   @override
+  Future<Object?> postProtegido(String path, Map<String, Object?> body) =>
+      throw UnimplementedError();
+  @override
+  Future<Object?> patchProtegido(String path) => throw UnimplementedError();
+  @override
   void dispose() {
     disposals++;
     super.dispose();
@@ -83,6 +88,13 @@ class UbicacionServiceMock implements UbicacionService {
 
 /// El inicio todavía consulta health. Las demás consultas deben pasar por servicios.
 class ApiClientMock implements ApiClient {
+  @override
+  Future<Object?> enviarJson(
+    String method,
+    String path, {
+    required String accessToken,
+    Map<String, Object?>? body,
+  }) => throw UnimplementedError();
   int closes = 0;
   @override
   Future<String> getText(

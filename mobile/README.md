@@ -23,22 +23,37 @@ lib/
     login_page.dart
     registro_page.dart
     perfil_page.dart
-    funcion_pendiente_page.dart
+    mascotas_page.dart
+    publicacion_detalle_page.dart
+    publicar_mascota_page.dart
+    recomendaciones_page.dart
+    recomendacion_detalle_page.dart
+    recomendar_servicio_page.dart
   services/
     contracts/
       ubicacion_service.dart
       auth_service.dart
+      publicacion_service.dart
+      recomendacion_service.dart
     implementations/
       ubicacion_service_api.dart
       auth_service_api.dart
+      publicacion_service_api.dart
+      recomendacion_service_api.dart
   models/
     provincia_dto.dart
     localidad_dto.dart
     auth_dto.dart
+    pagina_dto.dart
+    publicacion_dto.dart
+    recomendacion_dto.dart
   widgets/
     barra_superior.dart
     selector_localidad.dart
     tarjeta_inicio.dart
+    campo_ubicacion.dart
+    contenido_formulario.dart
+    lista_paginada.dart
 ```
 
 - `main.dart`: entrada. Ejecuta `configurarServicios()` y luego `runApp(const HuellaCercaApp())`.
@@ -70,12 +85,18 @@ Estos nombres de carpetas son convenciones elegidas para organizar el código, n
 
 | Tarjeta | Ruta | Estado de esta versión |
 | --- | --- | --- |
-| Buscar mascotas | `/mascotas` | Aviso de Próximamente. |
-| Servicios recomendados | `/servicios` | Aviso de Próximamente. |
-| Publicar mascota | `/mascotas/publicar` | Visible con sesión; aviso de Próximamente. |
-| Recomendar un servicio | `/servicios/recomendar` | Visible con sesión; aviso de Próximamente. |
+| Buscar mascotas | `/mascotas` | Filtros, paginación, detalle y contacto públicos. |
+| Servicios recomendados | `/servicios` | Búsqueda por texto, rubro y ubicación; detalle público. |
+| Publicar mascota | `/mascotas/publicar` | Formulario autenticado, sin fotos; después abre el detalle. |
+| Recomendar un servicio | `/servicios/recomendar` | Busca similares, permite elegir prestador o crear uno con la recomendación. |
 
-Los cuatro destinos usan `FuncionPendientePage`, con título, icono y descripción propios y un botón para volver al inicio. No consultan ni crean datos. La API de recomendaciones ya existe, pero su interfaz se conectará después. El módulo de mascotas aún está pendiente. Los futuros endpoints de escritura también deberán exigir autenticación; mostrar u ocultar tarjetas no sustituye esa protección.
+Los cuatro destinos utilizan servicios reales. Las páginas reciben contratos por constructor; no llaman a HTTP directamente. Los detalles se abren con MaterialPageRoute pasando el ID y los mismos contratos. Después de crear se reemplaza el formulario por el detalle para evitar volver accidentalmente al formulario enviado. Login y registro conservan su regreso al inicio.
+
+En mascotas se muestran activas por defecto. Se puede filtrar Perdida/Encontrada, Perro/Gato/Otro, estado, provincia, localidad, zona y rango de fechas del suceso. Con sesión aparece Solo mis publicaciones; para encontrar avisos propios resueltos, seleccionar Resuelta o Todas y Buscar. El detalle ofrece Marcar como resuelta únicamente al autor de una publicación activa; pide confirmación y actualiza el estado con PATCH. Al volver a la búsqueda se recarga la página de resultados. La API verifica la autoría independientemente de lo que muestre Flutter.
+
+En recomendaciones, la selección de un prestador similar evita crear uno nuevo. También se permite crear otro aunque haya coincidencias. Modificar nombre, rubro o localidad invalida la búsqueda y selección previas. El DTO de creación envía solo prestadorServicioId o nuevoPrestador, nunca ambos. Dirección, teléfono y enlace son opcionales para el nuevo prestador. No hay llamadas a Google Places.
+
+Las búsquedas incluyen estados de carga, error con reintento, resultados vacíos y páginas de 20 elementos. Los formularios validan campos, deshabilitan envío mientras guardan y requieren sesión. La carga/visualización de fotografías queda pendiente: se permite publicar sin fotos y no se envían rutas ficticias. Esta etapa no incluye editar/eliminar recomendaciones desde la app, aunque la API ya dispone de esas operaciones.
 
 La pantalla de inicio es un `StatelessWidget`: su información cambiante está en `AuthService`, que avisa a `ListenableBuilder`. No necesita su propia carga de provincias ni estado local. La disposición vertical permite desplazarse y limita el ancho en pantallas grandes.
 
@@ -156,14 +177,14 @@ getIt.registerSingleton<AuthService>(
 );
 ```
 
-Los mocks viven solo en `test/support/service_mocks.dart`. Las pruebas de HTTP usan el mismo registro real, con transporte y almacenamiento simulados. El inicio ya no necesita servicios de ubicación ni transporte HTTP; los filtros de ubicación permanecen en registro y se incorporarán a las futuras búsquedas.
+Los mocks viven en `test/support/`. Las pruebas de HTTP usan transporte y almacenamiento simulados. El inicio no necesita servicios de ubicación ni transporte HTTP; las pantallas de registro, búsqueda y publicación usan el contrato UbicacionService.
 
 ### Comportamiento de la implementación de sesión
 
 - `POST /api/auth/register`: formulario con nombre, apellido, email, contraseña, confirmación, teléfono opcional y localidad. Crear cuenta inicia sesión.
 - `POST /api/auth/login`: email y contraseña.
 - `GET /api/auth/me`: perfil de solo lectura, consultado con Bearer access token.
-- `POST /api/auth/refresh`: renueva usando exclusivamente el refresh en el cuerpo JSON. Las consultas GET protegidas reintentan una sola vez tras un 401; las simultáneas comparten una renovación. Login y registro no se reintentan automáticamente.
+- `POST /api/auth/refresh`: renueva usando exclusivamente el refresh en el cuerpo JSON. GET, POST y PATCH protegidos reintentan una sola vez tras un 401; las solicitudes simultáneas comparten una renovación. Los envíos no se reintentan automáticamente ante errores de red, 400, 403 o 500. Login y registro no se reintentan automáticamente.
 - `POST /api/auth/logout`: revoca la sesión en la API y borra los datos locales. Si falla la red, la app informa que no pudo confirmar el cierre en el servidor.
 
 `SecureSessionStorage` guarda la respuesta de sesión en una única entrada de almacenamiento seguro; nunca guarda la contraseña. Usa [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage). Android tiene `allowBackup=false` siguiendo la configuración del paquete. Al abrir se recupera la sesión y se consulta el perfil; si el JWT venció se renueva. El vencimiento absoluto del refresh lo determina la API (30 días actualmente). Si una renovación falla se limpia la sesión para evitar reutilizar un refresh que pudo haber rotado; será necesario ingresar nuevamente. Un fallo de red al consultar el perfil, sin renovación, conserva la sesión.

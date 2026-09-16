@@ -501,16 +501,89 @@ Con el accessToken de Bruno:
 
 Hacé esta prueba antes de eliminar la recomendación de Ana. Para editar o eliminar después, volvé a seleccionar el token del autor correspondiente.
 
+## 5 - PublicacionesController
+
+Base: `http://localhost:5080/api/publicaciones`.
+
+Valores numéricos: `tipoPublicacion`: 1 Perdida, 2 Encontrada. `tipoMascota`: 1 Perro, 2 Gato, 3 Otro. `estado`: 1 Activa, 2 Resuelta.
+
+### a) Crear una publicación sin fotos
+
+**POST** `http://localhost:5080/api/publicaciones`
+
+**Authorization:** Bearer Token, pegar el **accessToken** de login/registro (no el refreshToken).
+
+Body → raw → JSON:
+
+```json
+{
+  "tipoPublicacion": 1,
+  "tipoMascota": 1,
+  "nombreMascota": "Toby",
+  "descripcion": "Perro marrón mediano con collar azul. Se perdió cerca de la plaza.",
+  "fechaSuceso": "2026-09-15",
+  "localidadId": "LOCALIDAD_ID",
+  "zona": "Alrededores de la plaza principal",
+  "informacionContacto": "Contactar por teléfono al 2215550000"
+}
+```
+
+Reemplazá LOCALIDAD_ID por un ID obtenido en la consulta de localidades. FechaSuceso usa `AAAA-MM-DD` y no puede ser futura. NombreMascota puede ser null u omitirse. Las fotos son opcionales; todavía no se envían archivos en este endpoint.
+
+**Esperado:** 201, encabezado Location con el detalle y JSON de la publicación. Guardá su `id` como PUBLICACION_ID. Devuelve `estado: 1`, `fotografias: []`, autor y nombres de localidad/provincia. No se envían MascoteroId, Estado ni FechaCreacion: los determina la API. El contacto ingresado será visible en las consultas públicas.
+
+Para un aviso de mascota encontrada usar `tipoPublicacion: 2`.
+
+### b) Buscar publicaciones
+
+**GET** `http://localhost:5080/api/publicaciones`
+
+**Authorization:** No Auth. **Body:** ninguno.
+
+Ejemplo de filtros (reemplazar LOCALIDAD_ID):
+
+```text
+http://localhost:5080/api/publicaciones?tipoPublicacion=1&tipoMascota=1&estado=1&localidadId=LOCALIDAD_ID&zona=plaza&fechaDesde=2026-09-01&fechaHasta=2026-09-16&pagina=1&tamanoPagina=20
+```
+
+Todos los filtros son opcionales. También acepta `provinciaId` y `mascoteroId`. Las fechas filtran el día del suceso, incluyendo ambos límites. Zona busca texto parcial sin distinguir mayúsculas. Sin filtro de estado devuelve activas y resueltas. Orden: creación más reciente primero. Tamaño máximo de página: 100.
+
+**Esperado:** 200 con `items`, `total`, `pagina` y `tamanoPagina`. Sin coincidencias: `items: []` y `total: 0`.
+
+### c) Consultar el detalle
+
+**GET** `http://localhost:5080/api/publicaciones/PUBLICACION_ID`
+
+**Authorization:** No Auth. **Body:** ninguno.
+
+**Esperado:** 200 con la publicación, incluyendo su contacto. ID inexistente: 404.
+
+### d) Marcar como resuelta
+
+**PATCH** `http://localhost:5080/api/publicaciones/PUBLICACION_ID/resolver`
+
+**Authorization:** Bearer Token con el accessToken del autor. **Body:** ninguno.
+
+**Esperado:** 200 con `estado: 2`. No elimina la publicación. Repetir como autor devuelve 200 y conserva Resuelta.
+
+### e) Validaciones y permisos
+
+- Crear o resolver sin token: **401**.
+- Resolver usando el token de otro mascotero: **403**, sin modificar el aviso.
+- Resolver un ID inexistente con token válido: **404**.
+- Crear con fecha futura, localidad inexistente, descripción menor a 10 caracteres útiles, zona/contacto vacíos o tipos fuera de los valores indicados: **400**.
+- Buscar con `pagina=0`, `tamanoPagina=101` o fechaDesde posterior a fechaHasta: **400**.
+
 ## Resumen de respuestas
 
 | Código | Significado en estas pruebas |
 | --- | --- |
 | 200 | Consulta u operación correcta con respuesta. |
-| 201 | Registro o recomendación creados. |
+| 201 | Registro, recomendación o publicación creados. |
 | 204 | Operación correcta sin cuerpo: logout o eliminación. |
 | 400 | JSON, parámetros o datos inválidos. |
 | 401 | Credenciales/token inválidos, vencidos o ausentes; refresh no renovable. |
-| 403 | Usuario autenticado que no es el autor de la recomendación. |
+| 403 | Usuario autenticado que no es el autor del contenido que intenta modificar. |
 | 404 | Recurso inexistente o no disponible. |
 | 409 | Email repetido o conflicto de actualización. |
 | 429 | Límite de autenticación: esperar; actualmente 60 solicitudes por minuto por IP. |

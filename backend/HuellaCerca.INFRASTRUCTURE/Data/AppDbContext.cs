@@ -14,6 +14,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Rubro> Rubros => Set<Rubro>();
     public DbSet<PrestadorServicio> PrestadoresServicio => Set<PrestadorServicio>();
     public DbSet<Recomendacion> Recomendaciones => Set<Recomendacion>();
+    public DbSet<PublicacionMascota> PublicacionesMascotas => Set<PublicacionMascota>();
+    public DbSet<FotoPublicacion> FotosPublicaciones => Set<FotoPublicacion>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

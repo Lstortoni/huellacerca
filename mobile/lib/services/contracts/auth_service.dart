@@ -18,6 +18,8 @@ abstract class AuthService implements Listenable {
 
   /// GET autenticado; la implementación coordina la renovación cuando corresponde.
   Future<Object?> getProtegido(String path);
+  Future<Object?> postProtegido(String path, Map<String, Object?> body);
+  Future<Object?> patchProtegido(String path);
 
   /// Lo llama el dueño de la sesión al liberar las dependencias de la app.
   void dispose();

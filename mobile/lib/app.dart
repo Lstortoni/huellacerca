@@ -7,7 +7,12 @@ import 'pages/inicio_page.dart';
 import 'pages/login_page.dart';
 import 'pages/registro_page.dart';
 import 'pages/perfil_page.dart';
-import 'pages/funcion_pendiente_page.dart';
+import 'pages/mascotas_page.dart';
+import 'pages/publicar_mascota_page.dart';
+import 'pages/recomendaciones_page.dart';
+import 'pages/recomendar_servicio_page.dart';
+import 'services/contracts/publicacion_service.dart';
+import 'services/contracts/recomendacion_service.dart';
 
 /// Widget raíz: resuelve contratos y configura tema, inicio y rutas.
 class HuellaCercaApp extends StatefulWidget {
@@ -41,32 +46,25 @@ class _HuellaCercaAppState extends State<HuellaCercaApp> {
         ubicacion: getIt<UbicacionService>(),
       ),
       '/perfil': (_) => PerfilPage(auth: getIt<AuthService>()),
-      '/mascotas': (_) => FuncionPendientePage(
+      '/mascotas': (_) => MascotasPage(
         auth: getIt<AuthService>(),
-        titulo: 'Buscar mascotas',
-        icono: Icons.pets_outlined,
-        descripcion: 'Acá vas a poder buscar mascotas perdidas y encontradas por ubicación.',
+        service: getIt<PublicacionService>(),
+        ubicacion: getIt<UbicacionService>(),
       ),
-      '/servicios': (_) => FuncionPendientePage(
+      '/servicios': (_) => RecomendacionesPage(
         auth: getIt<AuthService>(),
-        titulo: 'Servicios recomendados',
-        icono: Icons.storefront_outlined,
-        descripcion: 'Acá vas a poder buscar servicios recomendados por rubro y ubicación.',
+        service: getIt<RecomendacionService>(),
+        ubicacion: getIt<UbicacionService>(),
       ),
-      '/mascotas/publicar': (_) => FuncionPendientePage(
+      '/mascotas/publicar': (_) => PublicarMascotaPage(
         auth: getIt<AuthService>(),
-        titulo: 'Publicar mascota',
-        icono: Icons.campaign_outlined,
-        requiereSesion: true,
-        descripcion:
-            'Acá vas a poder publicar una mascota perdida o encontrada.',
+        service: getIt<PublicacionService>(),
+        ubicacion: getIt<UbicacionService>(),
       ),
-      '/servicios/recomendar': (_) => FuncionPendientePage(
+      '/servicios/recomendar': (_) => RecomendarServicioPage(
         auth: getIt<AuthService>(),
-        titulo: 'Recomendar un servicio',
-        icono: Icons.rate_review_outlined,
-        requiereSesion: true,
-        descripcion: 'Acá vas a poder compartir tu recomendación de un servicio para mascotas.',
+        service: getIt<RecomendacionService>(),
+        ubicacion: getIt<UbicacionService>(),
       ),
     },
   );

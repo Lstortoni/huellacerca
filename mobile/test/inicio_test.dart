@@ -9,6 +9,11 @@ import 'package:huella_cerca/services/contracts/auth_service.dart';
 import 'package:huella_cerca/widgets/tarjeta_inicio.dart';
 
 import 'support/service_mocks.dart';
+import 'support/comunidad_mocks.dart';
+
+import 'package:huella_cerca/services/contracts/ubicacion_service.dart';
+import 'package:huella_cerca/services/contracts/publicacion_service.dart';
+import 'package:huella_cerca/services/contracts/recomendacion_service.dart';
 
 class _AuthRestaurando extends AuthServiceMock {
   final ready = Completer<void>();
@@ -60,8 +65,11 @@ void main() {
   });
 
   testWidgets(
-    'Las cuatro tarjetas abren destinos pendientes y permiten volver',
+    'Las cuatro tarjetas abren las pantallas conectadas y permiten volver',
     (tester) async {
+      getIt.registerSingleton<UbicacionService>(UbicacionServiceMock());
+      getIt.registerSingleton<PublicacionService>(PublicacionServiceMock());
+      getIt.registerSingleton<RecomendacionService>(RecomendacionServiceMock());
       await tester.pumpWidget(const HuellaCercaApp());
       await tester.pumpAndSettle();
       for (final title in [
@@ -83,12 +91,9 @@ void main() {
         );
         await tester.tap(find.text(title));
         await tester.pumpAndSettle();
-        expect(find.text('Próximamente'), findsOneWidget);
-        expect(
-          find.text('Esta función todavía no está disponible.'),
-          findsOneWidget,
-        );
-        await tester.tap(find.text('Volver al inicio'));
+        expect(find.text('Próximamente'), findsNothing);
+        expect(find.text(title), findsOneWidget);
+        await tester.pageBack();
         await tester.pumpAndSettle();
         expect(
           find.byType(TarjetaInicio),

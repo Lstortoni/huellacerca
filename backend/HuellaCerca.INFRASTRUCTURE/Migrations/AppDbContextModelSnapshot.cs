@@ -23,6 +23,34 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("HuellaCerca.MODEL.FotoPublicacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("PublicacionMascotaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RutaArchivo")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublicacionMascotaId", "Orden")
+                        .IsUnique();
+
+                    b.ToTable("fotos_publicaciones", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_fotos_publicaciones_orden", "\"Orden\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("HuellaCerca.MODEL.Localidad", b =>
                 {
                     b.Property<Guid>("Id")
@@ -208,6 +236,70 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                     b.ToTable("provincias", (string)null);
                 });
 
+            modelBuilder.Entity("HuellaCerca.MODEL.PublicacionMascota", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(3000)
+                        .HasColumnType("character varying(3000)");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("FechaSuceso")
+                        .HasColumnType("date");
+
+                    b.Property<string>("InformacionContacto")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("LocalidadId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MascoteroId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NombreMascota")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("TipoMascota")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TipoPublicacion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Zona")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FechaCreacion");
+
+                    b.HasIndex("MascoteroId");
+
+                    b.HasIndex("LocalidadId", "Estado", "FechaSuceso");
+
+                    b.ToTable("publicaciones_mascotas", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_publicaciones_mascotas_estado", "\"Estado\" IN (1, 2)");
+
+                            t.HasCheckConstraint("CK_publicaciones_mascotas_mascota", "\"TipoMascota\" IN (1, 2, 3)");
+
+                            t.HasCheckConstraint("CK_publicaciones_mascotas_tipo", "\"TipoPublicacion\" IN (1, 2)");
+                        });
+                });
+
             modelBuilder.Entity("HuellaCerca.MODEL.Recomendacion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -391,6 +483,17 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                     b.ToTable("usuarios", (string)null);
                 });
 
+            modelBuilder.Entity("HuellaCerca.MODEL.FotoPublicacion", b =>
+                {
+                    b.HasOne("HuellaCerca.MODEL.PublicacionMascota", "PublicacionMascota")
+                        .WithMany("Fotografias")
+                        .HasForeignKey("PublicacionMascotaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PublicacionMascota");
+                });
+
             modelBuilder.Entity("HuellaCerca.MODEL.Localidad", b =>
                 {
                     b.HasOne("HuellaCerca.MODEL.Provincia", "Provincia")
@@ -451,6 +554,25 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                     b.Navigation("Pais");
                 });
 
+            modelBuilder.Entity("HuellaCerca.MODEL.PublicacionMascota", b =>
+                {
+                    b.HasOne("HuellaCerca.MODEL.Localidad", "Localidad")
+                        .WithMany()
+                        .HasForeignKey("LocalidadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HuellaCerca.MODEL.Mascotero", "Mascotero")
+                        .WithMany("PublicacionesMascotas")
+                        .HasForeignKey("MascoteroId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Localidad");
+
+                    b.Navigation("Mascotero");
+                });
+
             modelBuilder.Entity("HuellaCerca.MODEL.Recomendacion", b =>
                 {
                     b.HasOne("HuellaCerca.MODEL.Mascotero", "Mascotero")
@@ -494,6 +616,8 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
 
             modelBuilder.Entity("HuellaCerca.MODEL.Mascotero", b =>
                 {
+                    b.Navigation("PublicacionesMascotas");
+
                     b.Navigation("Recomendaciones");
 
                     b.Navigation("Usuario")
@@ -513,6 +637,11 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
             modelBuilder.Entity("HuellaCerca.MODEL.Provincia", b =>
                 {
                     b.Navigation("Localidades");
+                });
+
+            modelBuilder.Entity("HuellaCerca.MODEL.PublicacionMascota", b =>
+                {
+                    b.Navigation("Fotografias");
                 });
 
             modelBuilder.Entity("HuellaCerca.MODEL.Usuario", b =>

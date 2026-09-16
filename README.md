@@ -61,7 +61,7 @@ API referencia SERVICES e INFRASTRUCTURE; ambas referencian INTERFACES, que refe
 
 La API consulta los catálogos mediante EF Core. `/health` comprueba que la API responde, no la conexión a PostgreSQL. Las consultas de ubicación son públicas y de solo lectura.
 
-Usuario y Mascotero tienen relación uno a uno. Registro, login JWT, renovación, cierre de sesión y recomendaciones básicas están implementados. Todavía no hay verificación de email, recuperación de contraseña, publicaciones de mascotas, comentarios ni me gusta. La app Flutter tiene inicio público con tarjetas y agrega acciones de participación cuando hay sesión. Los cuatro accesos de búsqueda/publicación llevan temporalmente a un aviso de Próximamente; autenticación, perfil y ubicación del registro están conectados a la API.
+Usuario y Mascotero tienen relación uno a uno. Registro, login JWT, renovación, cierre de sesión y recomendaciones básicas están implementados. Publicaciones de mascotas incluye modelo, migración, DTO, repositorio, servicio y endpoints de creación sin fotos, búsqueda pública, detalle y resolución exclusiva del autor. La subida de imágenes queda pendiente. Tampoco hay verificación de email, recuperación de contraseña, comentarios ni me gusta. La app Flutter tiene inicio público con tarjetas y agrega acciones de participación cuando hay sesión. Están conectados autenticación, perfil, ubicación, búsqueda y detalle de mascotas/recomendaciones, publicación de mascotas y resolución del autor, y recomendaciones con selección o creación de prestador.
 
 ## Ubicación: primera carga
 
@@ -146,3 +146,7 @@ Los endpoints de autenticación tienen un límite de 60 solicitudes por minuto p
 El proyecto Flutter está en `mobile/`, con inicio público y una barra de cuenta compartida. Incluye ingreso, registro con provincia/localidad, perfil de solo lectura, almacenamiento seguro de sesión, renovación y cierre de sesión. Consultar [la guía de Flutter](mobile/README.md) para ejecutarlo, configurar la URL, entender sus carpetas y probar el recorrido completo contra la API local.
 
 .NET 8 se conserva inicialmente por coherencia con el proyecto de referencia. Revisar la versión objetivo y su soporte antes del despliegue.
+
+## Modelo de publicaciones de mascotas
+
+Consultar [entidades, relaciones y próximos pasos](docs/publicaciones-mascotas.md).

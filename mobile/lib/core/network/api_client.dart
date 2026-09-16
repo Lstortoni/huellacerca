@@ -12,5 +12,11 @@ abstract class ApiClient {
     String? accessToken,
   });
   Future<Object?> postJson(String path, Map<String, Object?> body);
+  Future<Object?> enviarJson(
+    String method,
+    String path, {
+    required String accessToken,
+    Map<String, Object?>? body,
+  });
   void close();
 }

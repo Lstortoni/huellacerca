@@ -36,6 +36,8 @@ builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IRecomendacionRepository, RecomendacionRepository>();
 builder.Services.AddScoped<IRecomendacionService, RecomendacionService>();
+builder.Services.AddScoped<IPublicacionRepository, PublicacionRepository>();
+builder.Services.AddScoped<IPublicacionService, PublicacionService>();
 builder.Services.AddSingleton<ICredenciales, Credenciales>();
 builder.Services.AddOptions<JwtSettings>().Bind(builder.Configuration.GetSection("Jwt"))
     .Validate(x => Encoding.UTF8.GetByteCount(x.Key) >= 32 && !x.Key.StartsWith("CAMBIAR_") && !string.IsNullOrWhiteSpace(x.Issuer) && !string.IsNullOrWhiteSpace(x.Audience), "Configurar Jwt:Key (mínimo 32 bytes), Issuer y Audience.")

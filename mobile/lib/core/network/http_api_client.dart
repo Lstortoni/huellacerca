@@ -26,6 +26,20 @@ class HttpApiClient implements ApiClient {
     Map<String, String>? query,
     String? accessToken,
     Map<String, Object?>? body,
+  }) => _request(
+    body == null ? 'GET' : 'POST',
+    path,
+    query: query,
+    accessToken: accessToken,
+    body: body,
+  );
+
+  Future<String> _request(
+    String method,
+    String path, {
+    Map<String, String>? query,
+    String? accessToken,
+    Map<String, Object?>? body,
   }) async {
     final uri = _baseUri.resolve(path).replace(queryParameters: query);
     try {
@@ -34,11 +48,12 @@ class HttpApiClient implements ApiClient {
         if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         if (body != null) 'Content-Type': 'application/json',
       };
-      final response =
-          await (body == null
-                  ? _client.get(uri, headers: headers)
-                  : _client.post(uri, headers: headers, body: jsonEncode(body)))
-              .timeout(timeout);
+      final request = http.Request(method, uri)..headers.addAll(headers);
+      if (body != null) request.body = jsonEncode(body);
+      final response = await _client
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(timeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ApiException(
           response.statusCode >= 500
@@ -87,6 +102,22 @@ class HttpApiClient implements ApiClient {
         'Recibimos una respuesta que no pudimos interpretar.',
       );
     }
+  }
+
+  @override
+  Future<Object?> enviarJson(
+    String method,
+    String path, {
+    required String accessToken,
+    Map<String, Object?>? body,
+  }) async {
+    final text = await _request(
+      method,
+      path,
+      accessToken: accessToken,
+      body: body,
+    );
+    return text.isEmpty ? null : _decode(text);
   }
 
   @override

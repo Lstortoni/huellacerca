@@ -3,6 +3,10 @@ import 'package:http/http.dart' as http;
 
 import '../../services/contracts/auth_service.dart';
 import '../../services/contracts/ubicacion_service.dart';
+import '../../services/contracts/publicacion_service.dart';
+import '../../services/contracts/recomendacion_service.dart';
+import '../../services/implementations/publicacion_service_api.dart';
+import '../../services/implementations/recomendacion_service_api.dart';
 import '../../services/implementations/auth_service_api.dart';
 import '../../services/implementations/ubicacion_service_api.dart';
 import '../config/api_config.dart';
@@ -33,5 +37,11 @@ void configurarServicios({
   );
   getIt.registerLazySingleton<UbicacionService>(
     () => UbicacionServiceApi(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<PublicacionService>(
+    () => PublicacionServiceApi(getIt<ApiClient>(), getIt<AuthService>()),
+  );
+  getIt.registerLazySingleton<RecomendacionService>(
+    () => RecomendacionServiceApi(getIt<ApiClient>(), getIt<AuthService>()),
   );
 }

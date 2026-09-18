@@ -4,6 +4,8 @@ Inicio con tarjetas públicas de búsqueda y acciones de participación según l
 
 ## Dónde se programa
 
+Adopción: el selector distingue Doy en adopción (3) y Busco adoptar (4). Ambos ocultan fecha del suceso y usan fecha de publicación. Busco adoptar también oculta nombre y permite omitir zona. Tipo de mascota, descripción, localidad y contacto continúan obligatorios. El detalle muestra el contacto público para que otra persona pueda comunicarse; no hay chat interno. Fotos pendientes.
+
 El código compartido está en `lib/`. Pantallas, servicios y DTO son archivos `.dart`. La interfaz se construye con widgets escritos en Dart; no usamos un archivo XAML separado como en MAUI.
 
 ```text
@@ -68,7 +70,7 @@ lib/
 - `provincia_dto.dart`: equivalente a un DTO C#. Define `id`, `nombre` y `paisCodigo`; `fromJson` convierte y valida el objeto recibido de la API.
 - `ubicacion_service.dart`: contrato que devuelve `Future<List<ProvinciaDto>>`, comparable con `Task<List<ProvinciaDto>>` en C#. `ubicacion_service_api.dart` conoce los endpoints y convierte los DTO.
 - `api_client.dart`: contrato de transporte, sin tipos del paquete HTTP. `http_api_client.dart` realiza HTTP, decodifica JSON y transforma errores en `ApiException`.
-- `inicio_page.dart`: inicio que escucha el contrato de sesión y muestra dos o cuatro tarjetas. `tarjeta_inicio.dart` es el componente visual reutilizado por cada acceso.
+- `inicio_page.dart`: inicio que escucha el contrato de sesión y muestra dos o cinco tarjetas. `tarjeta_inicio.dart` es el componente visual reutilizado por cada acceso.
 
 Estos nombres de carpetas son convenciones elegidas para organizar el código, no una obligación de Flutter. Los DTO Dart representan el contrato JSON, sin referenciar las clases C# ni las entidades EF.
 
@@ -78,7 +80,7 @@ Estos nombres de carpetas son convenciones elegidas para organizar el código, n
 2. `app.dart` inicia la restauración de sesión y muestra `InicioPage(auth: getIt<AuthService>())`.
 3. Inicio recibe solo el contrato `AuthService`. `ListenableBuilder` escucha sus notificaciones.
 4. Siempre muestra Buscar mascotas y Servicios recomendados. Mientras restaura la sesión, muestra un indicador sin bloquear esos accesos.
-5. Sin sesión agrega la invitación a ingresar/registrarse. Con sesión muestra el saludo y las tarjetas Publicar mascota y Recomendar un servicio.
+5. Sin sesión agrega la invitación a ingresar/registrarse. Con sesión muestra el saludo y las tarjetas Publicar un aviso, Mis publicaciones y Recomendar un servicio.
 6. Al tocar una tarjeta, su callback `onTap` llama `Navigator.pushNamed` con la ruta correspondiente.
 7. `app.dart` resuelve la ruta y muestra su página destino.
 8. Login y registro vuelven al inicio al completarse; `notifyListeners()` actualiza tanto el inicio como la barra. Logout vuelve a mostrar las dos tarjetas públicas.
@@ -87,10 +89,10 @@ Estos nombres de carpetas son convenciones elegidas para organizar el código, n
 | --- | --- | --- |
 | Buscar mascotas | `/mascotas` | Filtros, paginación, detalle y contacto públicos. |
 | Servicios recomendados | `/servicios` | Búsqueda por texto, rubro y ubicación; detalle público. |
-| Publicar mascota | `/mascotas/publicar` | Formulario autenticado, sin fotos; después abre el detalle. |
+| Publicar un aviso | `/mascotas/publicar` | Formulario autenticado, sin fotos; después abre el detalle. |
 | Recomendar un servicio | `/servicios/recomendar` | Busca similares, permite elegir prestador o crear uno con la recomendación. |
 
-Los cuatro destinos utilizan servicios reales. Las páginas reciben contratos por constructor; no llaman a HTTP directamente. Los detalles se abren con MaterialPageRoute pasando el ID y los mismos contratos. Después de crear se reemplaza el formulario por el detalle para evitar volver accidentalmente al formulario enviado. Login y registro conservan su regreso al inicio.
+Los destinos utilizan servicios reales. Las páginas reciben contratos por constructor; no llaman a HTTP directamente. Los detalles se abren con MaterialPageRoute pasando el ID y los mismos contratos. Después de crear se reemplaza el formulario por el detalle para evitar volver accidentalmente al formulario enviado. Login y registro conservan su regreso al inicio.
 
 En mascotas se muestran activas por defecto. Se puede filtrar Perdida/Encontrada, Perro/Gato/Otro, estado, provincia, localidad, zona y rango de fechas del suceso. Con sesión aparece Solo mis publicaciones; para encontrar avisos propios resueltos, seleccionar Resuelta o Todas y Buscar. El detalle ofrece Marcar como resuelta únicamente al autor de una publicación activa; pide confirmación y actualiza el estado con PATCH. Al volver a la búsqueda se recarga la página de resultados. La API verifica la autoría independientemente de lo que muestre Flutter.
 
@@ -204,3 +206,5 @@ flutter test integration_test/auth_api_test.dart -d emulator-5554
 Crea una cuenta `hc-mobile-test-*` en la base local, que queda como dato de prueba. Usa una clave de almacenamiento independiente de la sesión habitual. Verifica registro, recuperación del almacenamiento seguro con una nueva instancia de la app, perfil, logout y login; termina cerrando las sesiones de prueba. Solo admite el host local/emulador y puerto 5080.
 
 Después de una prueba de integración, ejecutar `flutter run -d emulator-5554` para volver a instalar la app normal. Al agregar este plugin nativo se necesita detener y volver a ejecutar Flutter; hot reload por sí solo no lo incorpora.
+
+Mis publicaciones (/mascotas/mias) es un acceso autenticado del inicio: reutiliza la búsqueda fijando MascoteroId y muestra todos los estados inicialmente. Conserva el autor al aplicar filtros y retira el listado al cerrar sesión. La búsqueda pública mantiene Solo mis publicaciones como filtro opcional. Las etiquetas de búsqueda describen avisos ajenos (Mascotas en adopción / Personas que quieren adoptar) y las de creación expresan la intención del autor (Doy en adopción / Busco adoptar).

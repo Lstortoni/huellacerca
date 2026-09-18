@@ -97,14 +97,14 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
               const Icon(Icons.pets_outlined, size: 56),
               Text(p.titulo, style: Theme.of(context).textTheme.headlineMedium),
               Text(
-                '${tiposPublicacion[p.tipoPublicacion]} · ${tiposMascota[p.tipoMascota]} · ${estadosPublicacion[p.estado]}',
+                '${etiquetasPublicacion[p.tipoPublicacion]} · ${tiposMascota[p.tipoMascota]} · ${estadosPublicacion[p.estado]}',
               ),
               const SizedBox(height: 16),
               Text(p.descripcion),
               const SizedBox(height: 16),
-              Text('Fecha: ${fechaVisible(p.fechaSuceso)}'),
+              Text('${p.etiquetaFecha}: ${fechaVisible(p.fechaReferencia)}'),
               Text('${p.localidad}, ${p.provincia}'),
-              Text('Zona: ${p.zona}'),
+              if (p.zona.isNotEmpty) Text('Zona: ${p.zona}'),
               const SizedBox(height: 16),
               const Text(
                 'Contacto',

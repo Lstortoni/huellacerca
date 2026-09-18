@@ -17,8 +17,11 @@ public sealed class PublicacionService(IPublicacionRepository repository, IAuthR
             throw new AppException(400, "Describí la mascota y lo sucedido en al menos 10 caracteres.");
         // FechaSuceso no contiene hora; se compara con el día actual en Argentina.
         var hoy = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "America/Argentina/Buenos_Aires"));
-        if (request.FechaSuceso == default || request.FechaSuceso > hoy)
+        var requiereFecha = request.TipoPublicacion is 1 or 2;
+        if (requiereFecha && (request.FechaSuceso is null || request.FechaSuceso == DateOnly.MinValue || request.FechaSuceso > hoy))
             throw new AppException(400, "Indicá una fecha del suceso válida, que no sea futura.");
+        if (request.TipoPublicacion != 4 && string.IsNullOrWhiteSpace(request.Zona))
+            throw new AppException(400, "Indicá la zona aproximada.");
         if (!await ubicaciones.LocalidadActivaAsync(request.LocalidadId, ct))
             throw new AppException(400, "Seleccioná una localidad activa.");
 
@@ -27,11 +30,11 @@ public sealed class PublicacionService(IPublicacionRepository repository, IAuthR
             MascoteroId = mascoteroId,
             TipoPublicacion = (TipoPublicacionMascota)request.TipoPublicacion,
             TipoMascota = (TipoMascota)request.TipoMascota,
-            NombreMascota = string.IsNullOrWhiteSpace(request.NombreMascota) ? null : request.NombreMascota.Trim(),
+            NombreMascota = request.TipoPublicacion == 4 || string.IsNullOrWhiteSpace(request.NombreMascota) ? null : request.NombreMascota.Trim(),
             Descripcion = request.Descripcion.Trim(),
-            FechaSuceso = request.FechaSuceso,
+            FechaSuceso = requiereFecha ? request.FechaSuceso : null,
             LocalidadId = request.LocalidadId,
-            Zona = request.Zona.Trim(),
+            Zona = request.Zona?.Trim() ?? "",
             InformacionContacto = request.InformacionContacto.Trim()
         };
         repository.Agregar(publicacion);

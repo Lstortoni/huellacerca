@@ -9,7 +9,7 @@ public sealed class PublicacionMascota
     public TipoMascota TipoMascota { get; set; }
     public string? NombreMascota { get; set; }
     public string Descripcion { get; set; } = "";
-    public DateOnly FechaSuceso { get; set; }
+    public DateOnly? FechaSuceso { get; set; }
     public Guid LocalidadId { get; set; }
     public string Zona { get; set; } = "";
     public string InformacionContacto { get; set; } = "";
@@ -19,4 +19,3 @@ public sealed class PublicacionMascota
     public Localidad Localidad { get; set; } = null!;
     public ICollection<FotoPublicacion> Fotografias { get; set; } = new List<FotoPublicacion>();
 }
-

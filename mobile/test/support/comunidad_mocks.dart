@@ -16,6 +16,7 @@ Map<String, dynamic> publicacionJson({
   'nombreMascota': 'Toby',
   'descripcion': 'Perro marrón con collar azul.',
   'fechaSuceso': '2026-09-15',
+  'fechaCreacion': '2026-09-15T15:00:00Z',
   'localidad': 'La Plata',
   'provincia': 'Buenos Aires',
   'zona': 'Plaza',

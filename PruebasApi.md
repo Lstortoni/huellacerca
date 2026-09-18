@@ -98,6 +98,25 @@ http://localhost:5080/api/auth/register
   "telefono": "2214567894",
   "localidadId": "eab3d5f3-4ef6-43f4-8e34-f672c511eefd"
 }
+
+{
+  "nombre": "Santino",
+  "apellido": "stortoni",
+  "email": "san.prueba@com.ar",
+  "password": "PruebaLocal2026!",
+  "passwordConfirm": "PruebaLocal2026!",
+  "telefono": "2216188446",
+  "localidadId": "eab3d5f3-4ef6-43f4-8e34-f672c511eefd"
+}
+{
+  "nombre": "Cintia",
+  "apellido": "Ornani",
+  "email": "cin.prueba@com.ar",
+  "password": "PruebaLocal2026!",
+  "passwordConfirm": "PruebaLocal2026!",
+  "telefono": "2216188446",
+  "localidadId": "eab3d5f3-4ef6-43f4-8e34-f672c511eefd"
+}
 ```
 
 **Esperado:** `201 Created`. Se crean Usuario, Mascotero y sesión en una misma transacción.
@@ -505,7 +524,7 @@ Hacé esta prueba antes de eliminar la recomendación de Ana. Para editar o elim
 
 Base: `http://localhost:5080/api/publicaciones`.
 
-Valores numéricos: `tipoPublicacion`: 1 Perdida, 2 Encontrada. `tipoMascota`: 1 Perro, 2 Gato, 3 Otro. `estado`: 1 Activa, 2 Resuelta.
+Valores numéricos: `tipoPublicacion`: 1 Perdida, 2 Encontrada, 3 Doy en adopción, 4 Busco adoptar. `tipoMascota`: 1 Perro, 2 Gato, 3 Otro. `estado`: 1 Activa, 2 Resuelta.
 
 ### a) Crear una publicación sin fotos
 
@@ -533,6 +552,21 @@ Reemplazá LOCALIDAD_ID por un ID obtenido en la consulta de localidades. FechaS
 **Esperado:** 201, encabezado Location con el detalle y JSON de la publicación. Guardá su `id` como PUBLICACION_ID. Devuelve `estado: 1`, `fotografias: []`, autor y nombres de localidad/provincia. No se envían MascoteroId, Estado ni FechaCreacion: los determina la API. El contacto ingresado será visible en las consultas públicas.
 
 Para un aviso de mascota encontrada usar `tipoPublicacion: 2`.
+Para dar en adopción usar `tipoPublicacion: 3`; para buscar adoptar, `4`. En ambos casos se omite `fechaSuceso`: la API devuelve null y se usa `fechaCreacion`. Buscar con `?tipoPublicacion=3` o `?tipoPublicacion=4`. Requiere la migración BuscoAdoptarFechaOpcional.
+
+Ejemplo de Busco adoptar, con JWT y un LOCALIDAD_ID válido:
+
+```json
+{
+  "tipoPublicacion": 4,
+  "tipoMascota": 2,
+  "descripcion": "Buscamos adoptar un gatito y darle un hogar.",
+  "localidadId": "LOCALIDAD_ID",
+  "informacionContacto": "Escribime a ana@example.com"
+}
+```
+
+Para tipo 4, nombre y fecha no se utilizan; zona es opcional. El contacto sigue siendo obligatorio y público. Para tipos 1 y 2 se sigue exigiendo fecha no futura. Los filtros de fechas usan el día de publicación en Argentina para ambos tipos de adopción, y el día del suceso para perdidas/encontradas.
 
 ### b) Buscar publicaciones
 

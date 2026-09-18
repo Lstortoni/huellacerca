@@ -28,8 +28,20 @@ public sealed class PublicacionRepository(AppDbContext db) : IPublicacionReposit
         if (q.LocalidadId.HasValue) query = query.Where(x => x.LocalidadId == q.LocalidadId);
         if (q.ProvinciaId.HasValue) query = query.Where(x => x.Localidad.ProvinciaId == q.ProvinciaId);
         if (q.MascoteroId.HasValue) query = query.Where(x => x.MascoteroId == q.MascoteroId);
-        if (q.FechaDesde.HasValue) query = query.Where(x => x.FechaSuceso >= q.FechaDesde);
-        if (q.FechaHasta.HasValue) query = query.Where(x => x.FechaSuceso <= q.FechaHasta);
+        // Adopción usa el día de publicación en Argentina; perdidas/encontradas el del suceso.
+        if (q.FechaDesde.HasValue)
+        {
+            var desdeUtc = DateTime.SpecifyKind(q.FechaDesde.Value.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc).AddHours(3);
+            query = query.Where(x => ((int)x.TipoPublicacion <= 2 && x.FechaSuceso >= q.FechaDesde)
+                || ((int)x.TipoPublicacion >= 3 && x.FechaCreacion >= desdeUtc));
+        }
+        if (q.FechaHasta.HasValue)
+        {
+            var hastaUtc = q.FechaHasta.Value == DateOnly.MaxValue ? DateTime.SpecifyKind(DateTime.MaxValue, DateTimeKind.Utc)
+                : DateTime.SpecifyKind(q.FechaHasta.Value.ToDateTime(TimeOnly.MaxValue), DateTimeKind.Utc).AddHours(3);
+            query = query.Where(x => ((int)x.TipoPublicacion <= 2 && x.FechaSuceso <= q.FechaHasta)
+                || ((int)x.TipoPublicacion >= 3 && x.FechaCreacion <= hastaUtc));
+        }
         if (!string.IsNullOrWhiteSpace(q.Zona))
         {
             var zona = q.Zona.Trim().ToLowerInvariant();

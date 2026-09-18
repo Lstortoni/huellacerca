@@ -44,7 +44,8 @@ void main() {
     expect(find.byType(TarjetaInicio), findsNWidgets(2));
     expect(find.text('Buscar mascotas'), findsOneWidget);
     expect(find.text('Servicios recomendados'), findsOneWidget);
-    expect(find.text('Publicar mascota'), findsNothing);
+    expect(find.text('Publicar un aviso'), findsNothing);
+    expect(find.text('Mis publicaciones'), findsNothing);
     expect(find.text('Recomendar un servicio'), findsNothing);
     expect(find.widgetWithText(FilledButton, 'Ingresar'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Registrarse'), findsOneWidget);
@@ -56,7 +57,7 @@ void main() {
     await auth.login(const LoginRequest('prueba@example.com', '12345678'));
     await tester.pumpAndSettle();
     expect(find.text('Hola, Ana'), findsOneWidget);
-    expect(find.byType(TarjetaInicio), findsNWidgets(4));
+    expect(find.byType(TarjetaInicio), findsNWidgets(5));
     expect(find.widgetWithText(FilledButton, 'Ingresar'), findsNothing);
     await auth.logout();
     await tester.pumpAndSettle();
@@ -65,7 +66,7 @@ void main() {
   });
 
   testWidgets(
-    'Las cuatro tarjetas abren las pantallas conectadas y permiten volver',
+    'Las cinco tarjetas abren las pantallas conectadas y permiten volver',
     (tester) async {
       getIt.registerSingleton<UbicacionService>(UbicacionServiceMock());
       getIt.registerSingleton<PublicacionService>(PublicacionServiceMock());
@@ -75,10 +76,11 @@ void main() {
       for (final title in [
         'Buscar mascotas',
         'Servicios recomendados',
-        'Publicar mascota',
+        'Publicar un aviso',
+        'Mis publicaciones',
         'Recomendar un servicio',
       ]) {
-        if (title == 'Publicar mascota') {
+        if (title == 'Publicar un aviso') {
           await auth.login(
             const LoginRequest('prueba@example.com', '12345678'),
           );
@@ -97,7 +99,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           find.byType(TarjetaInicio),
-          findsNWidgets(auth.autenticado ? 4 : 2),
+          findsNWidgets(auth.autenticado ? 5 : 2),
         );
       }
     },

@@ -16,10 +16,12 @@ class MascotasPage extends StatefulWidget {
     required this.auth,
     required this.service,
     required this.ubicacion,
+    this.soloMias = false,
   });
   final AuthService auth;
   final PublicacionService service;
   final UbicacionService ubicacion;
+  final bool soloMias;
   @override
   State<MascotasPage> createState() => _MascotasPageState();
 }
@@ -34,6 +36,16 @@ class _MascotasPageState extends State<MascotasPage> {
   String? _error;
   int _revision = 0;
   Map<String, String> _filtros = {'estado': '1'};
+  @override
+  void initState() {
+    super.initState();
+    if (widget.soloMias) {
+      _mias = true;
+      _estado = null;
+      _filtros = {'mascoteroId': widget.auth.usuario!.mascotero.id};
+    }
+  }
+
   @override
   void dispose() {
     _zona.dispose();
@@ -72,6 +84,7 @@ class _MascotasPageState extends State<MascotasPage> {
     ValueChanged<int?> changed,
   ) => DropdownButtonFormField<int>(
     isExpanded: true,
+    itemHeight: null,
     initialValue: value,
     decoration: InputDecoration(labelText: label),
     items: [
@@ -102,12 +115,29 @@ class _MascotasPageState extends State<MascotasPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: BarraSuperior(auth: widget.auth, titulo: 'Buscar mascotas'),
+    appBar: BarraSuperior(
+      auth: widget.auth,
+      titulo: widget.soloMias ? 'Mis publicaciones' : 'Buscar mascotas',
+    ),
     body: ContenidoFormulario(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _selector('Publicación', tiposPublicacion, _tipo, (v) => _tipo = v),
+          if (widget.soloMias)
+            const Text(
+              'Tus avisos de mascotas, incluidos los activos y los resueltos.',
+            ),
+          _selector(
+            '¿Qué avisos querés ver?',
+            tiposPublicacionBusqueda,
+            _tipo,
+            (v) => _tipo = v,
+          ),
+          if (_tipo != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(explicacionesPublicacion[_tipo]!),
+            ),
           _selector(
             'Tipo de mascota',
             tiposMascota,
@@ -156,17 +186,18 @@ class _MascotasPageState extends State<MascotasPage> {
                 ),
             ],
           ),
-          ListenableBuilder(
-            listenable: widget.auth,
-            builder: (_, _) => widget.auth.autenticado
-                ? CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Solo mis publicaciones'),
-                    value: _mias,
-                    onChanged: (v) => setState(() => _mias = v!),
-                  )
-                : const SizedBox.shrink(),
-          ),
+          if (!widget.soloMias)
+            ListenableBuilder(
+              listenable: widget.auth,
+              builder: (_, _) => widget.auth.autenticado
+                  ? CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Solo mis publicaciones'),
+                      value: _mias,
+                      onChanged: (v) => setState(() => _mias = v!),
+                    )
+                  : const SizedBox.shrink(),
+            ),
           if (_error != null) Text(_error!),
           FilledButton(onPressed: _buscar, child: const Text('Buscar')),
           const SizedBox(height: 20),
@@ -178,10 +209,10 @@ class _MascotasPageState extends State<MascotasPage> {
               child: ListTile(
                 leading: const Icon(Icons.pets_outlined),
                 title: Text(
-                  '${p.titulo} · ${tiposPublicacion[p.tipoPublicacion]}',
+                  '${p.titulo} · ${etiquetasPublicacion[p.tipoPublicacion]}',
                 ),
                 subtitle: Text(
-                  '${p.localidad}, ${p.provincia}\n${fechaVisible(p.fechaSuceso)} · ${estadosPublicacion[p.estado]}',
+                  '${p.localidad}, ${p.provincia}\n${fechaVisible(p.fechaReferencia)} · ${estadosPublicacion[p.estado]}',
                 ),
                 isThreeLine: true,
                 onTap: () async {

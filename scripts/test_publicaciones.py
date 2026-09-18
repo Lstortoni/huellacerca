@@ -1,4 +1,4 @@
-"""Pruebas HTTP de desarrollo. Deja dos cuentas y dos avisos resueltos hc-pets-test-*.
+"""Pruebas HTTP de desarrollo. Deja dos cuentas y cuatro avisos resueltos hc-pets-test-*.
 
 No borra datos existentes. Ejecutar con el servicio huellacerca_tests de Compose.
 """
@@ -53,7 +53,7 @@ request = dict(tipoPublicacion=1, tipoMascota=1, nombreMascota=None,
     localidadId=locality, zona=TAG + " Plaza", informacionContacto="Contacto de prueba")
 call("POST", "/api/publicaciones", request, expected=401)
 for bad in (
-    {"tipoPublicacion": 0}, {"tipoPublicacion": 3}, {"tipoMascota": 4},
+    {"tipoPublicacion": 0}, {"tipoPublicacion": 5}, {"tipoMascota": 4},
     {"fechaSuceso": "0001-01-01"}, {"fechaSuceso": (today + datetime.timedelta(days=1)).isoformat()},
     {"localidadId": str(uuid.uuid4())}, {"descripcion": " " * 15}, {"descripcion": "corta"},
     {"descripcion": "x" * 3001}, {"zona": " "}, {"informacionContacto": ""}, {"nombreMascota": "x" * 101},
@@ -102,6 +102,28 @@ for item in (first, second):
     assert call("PATCH", path, token=token)["estado"] == 2
     call("PATCH", path, token=b["accessToken"], expected=403)
 assert search(estado=1)["total"] == 0 and search(estado=2)["total"] == 2
+adoption = call("POST", "/api/publicaciones", {**request, "tipoPublicacion": 3}, token, 201)
+assert adoption["tipoPublicacion"] == 3 and adoption["fotografias"] == []
+assert call("GET", "/api/publicaciones/" + adoption["id"])["tipoPublicacion"] == 3
+assert search(tipoPublicacion=3)["items"][0]["id"] == adoption["id"]
+call("PATCH", "/api/publicaciones/" + adoption["id"] + "/resolver", token=b["accessToken"], expected=403)
+assert call("PATCH", "/api/publicaciones/" + adoption["id"] + "/resolver", token=token)["estado"] == 2
+assert adoption["fechaSuceso"] is None
+wanted_request = {k: v for k, v in request.items() if k not in ("fechaSuceso", "nombreMascota", "zona")}
+wanted_request["tipoPublicacion"] = 4
+call("POST", "/api/publicaciones", wanted_request, expected=401)
+call("POST", "/api/publicaciones", {**wanted_request, "informacionContacto": " "}, token, 400)
+wanted = call("POST", "/api/publicaciones", wanted_request, token, 201)
+assert wanted["fechaSuceso"] is None and wanted["nombreMascota"] is None and wanted["zona"] == ""
+assert wanted["fotografias"] == [] and wanted["informacionContacto"] == request["informacionContacto"]
+filters = urllib.parse.urlencode(dict(tipoPublicacion=4, mascoteroId=wanted["mascoteroId"], fechaDesde=today.isoformat(), fechaHasta=today.isoformat()))
+assert wanted["id"] in [x["id"] for x in call("GET", "/api/publicaciones?" + filters)["items"]]
+tomorrow = (today + datetime.timedelta(days=1)).isoformat()
+assert call("GET", "/api/publicaciones?" + filters + "&estado=2")["total"] == 0
+assert call("GET", "/api/publicaciones?" + urllib.parse.urlencode(dict(tipoPublicacion=4, mascoteroId=wanted["mascoteroId"], fechaDesde=tomorrow)))["total"] == 0
+assert call("GET", "/api/publicaciones/" + wanted["id"])["fechaCreacion"]
+call("PATCH", "/api/publicaciones/" + wanted["id"] + "/resolver", token=b["accessToken"], expected=403)
+assert call("PATCH", "/api/publicaciones/" + wanted["id"] + "/resolver", token=token)["estado"] == 2
 for session in sessions:
     call("POST", "/api/auth/logout", {"refreshToken": session["refreshToken"]}, expected=204)
 print("OK: creación sin fotos, validaciones, autor desde JWT, detalle público, filtros, paginación y resolución con permisos.")

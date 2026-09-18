@@ -52,11 +52,11 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
         CrearPublicacionRequest(
           tipoPublicacion: _tipo,
           tipoMascota: _mascota,
-          nombreMascota: _nombre.text.trim().isEmpty
+          nombreMascota: _tipo == 4 || _nombre.text.trim().isEmpty
               ? null
               : _nombre.text.trim(),
           descripcion: _descripcion.text.trim(),
-          fechaSuceso: _fecha!,
+          fechaSuceso: _tipo <= 2 ? _fecha : null,
           localidadId: _localidad!,
           zona: _zona.text.trim(),
           informacionContacto: _contacto.text.trim(),
@@ -81,7 +81,7 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: BarraSuperior(auth: widget.auth, titulo: 'Publicar mascota'),
+    appBar: BarraSuperior(auth: widget.auth, titulo: 'Publicar un aviso'),
     body: RequiereSesion(
       auth: widget.auth,
       child: ContenidoFormulario(
@@ -94,7 +94,7 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
                 isExpanded: true,
                 initialValue: _tipo,
                 decoration: const InputDecoration(
-                  labelText: '¿Perdiste o encontraste una mascota?',
+                  labelText: '¿Qué querés publicar?',
                 ),
                 items: tiposPublicacion.entries
                     .map(
@@ -118,14 +118,15 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
                     ? null
                     : (v) => setState(() => _mascota = v!),
               ),
-              TextFormField(
-                controller: _nombre,
-                enabled: !_ocupado,
-                maxLength: 100,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre (opcional)',
+              if (_tipo != 4)
+                TextFormField(
+                  controller: _nombre,
+                  enabled: !_ocupado,
+                  maxLength: 100,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre (opcional)',
+                  ),
                 ),
-              ),
               TextFormField(
                 controller: _descripcion,
                 enabled: !_ocupado,
@@ -135,42 +136,43 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
                 validator: descripcionValida,
                 decoration: const InputDecoration(labelText: 'Descripción'),
               ),
-              FormField<DateTime>(
-                validator: (_) =>
-                    _fecha == null ? 'Elegí la fecha del suceso.' : null,
-                builder: (field) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    OutlinedButton(
-                      onPressed: _ocupado
-                          ? null
-                          : () async {
-                              final value = await showDatePicker(
-                                context: context,
-                                initialDate: _fecha ?? DateTime.now(),
-                                firstDate: DateTime(1900),
-                                lastDate: DateTime.now(),
-                              );
-                              if (!mounted || value == null) return;
-                              setState(() => _fecha = value);
-                              field.didChange(value);
-                            },
-                      child: Text(
-                        _fecha == null
-                            ? 'Elegir fecha del suceso'
-                            : fechaVisible(_fecha!),
-                      ),
-                    ),
-                    if (field.hasError)
-                      Text(
-                        field.errorText!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+              if (_tipo <= 2)
+                FormField<DateTime>(
+                  validator: (_) =>
+                      _fecha == null ? 'Elegí la fecha del suceso.' : null,
+                  builder: (field) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      OutlinedButton(
+                        onPressed: _ocupado
+                            ? null
+                            : () async {
+                                final value = await showDatePicker(
+                                  context: context,
+                                  initialDate: _fecha ?? DateTime.now(),
+                                  firstDate: DateTime(1900),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (!mounted || value == null) return;
+                                setState(() => _fecha = value);
+                                field.didChange(value);
+                              },
+                        child: Text(
+                          _fecha == null
+                              ? 'Elegir fecha del suceso'
+                              : fechaVisible(_fecha!),
                         ),
                       ),
-                  ],
+                      if (field.hasError)
+                        Text(
+                          field.errorText!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
               CampoUbicacion(
                 service: widget.ubicacion,
                 obligatorio: true,
@@ -181,8 +183,12 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
                 controller: _zona,
                 enabled: !_ocupado,
                 maxLength: 250,
-                validator: requerido,
-                decoration: const InputDecoration(labelText: 'Zona aproximada'),
+                validator: _tipo == 4 ? null : requerido,
+                decoration: InputDecoration(
+                  labelText: _tipo == 4
+                      ? 'Zona aproximada (opcional)'
+                      : 'Zona aproximada',
+                ),
               ),
               TextFormField(
                 controller: _contacto,
@@ -191,6 +197,7 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
                 validator: requerido,
                 decoration: const InputDecoration(
                   labelText: 'Información de contacto',
+                  hintText: 'Teléfono, WhatsApp o email',
                 ),
               ),
               const Text(

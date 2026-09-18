@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:huella_cerca/models/auth_dto.dart';
 import 'package:huella_cerca/pages/mascotas_page.dart';
+import 'package:huella_cerca/pages/mis_publicaciones_page.dart';
 import 'package:huella_cerca/pages/publicacion_detalle_page.dart';
 import 'package:huella_cerca/pages/publicar_mascota_page.dart';
 import 'package:huella_cerca/pages/recomendar_servicio_page.dart';
@@ -30,6 +31,126 @@ Future<void> elegirLocalidad(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets(
+    'Mis publicaciones fija autor, incluye resueltas y no consulta sin sesión',
+    (tester) async {
+      final auth = AuthServiceMock();
+      final service = PublicacionServiceMock();
+      addTearDown(auth.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MisPublicacionesPage(
+            auth: auth,
+            service: service,
+            ubicacion: UbicacionServiceMock(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(service.consultas, 0);
+      await auth.login(const LoginRequest('a@b.com', '12345678'));
+      await tester.pumpAndSettle();
+      expect(service.filtros, {'mascoteroId': 'mascotero-1'});
+      expect(find.text('Solo mis publicaciones'), findsNothing);
+      await tapVisible(tester, find.widgetWithText(FilledButton, 'Buscar'));
+      expect(service.filtros, {'mascoteroId': 'mascotero-1'});
+      await auth.logout();
+      await tester.pumpAndSettle();
+      expect(find.text('Toby · Perdida'), findsNothing);
+      expect(find.text('Ingresá para continuar.'), findsOneWidget);
+    },
+  );
+  testWidgets('Buscar explica la diferencia entre ofrecer y buscar adopción', (
+    tester,
+  ) async {
+    final auth = AuthServiceMock();
+    final service = PublicacionServiceMock();
+    addTearDown(auth.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MascotasPage(
+          auth: auth,
+          service: service,
+          ubicacion: UbicacionServiceMock(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tapVisible(
+      tester,
+      find.widgetWithText(
+        DropdownButtonFormField<int>,
+        '¿Qué avisos querés ver?',
+      ),
+    );
+    await tester.tap(find.text('Personas que quieren adoptar').last);
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Personas que buscan adoptar. Mirá estos avisos si tenés un animal para dar en adopción.',
+      ),
+      findsOneWidget,
+    );
+    await tapVisible(tester, find.widgetWithText(FilledButton, 'Buscar'));
+    expect(service.filtros['tipoPublicacion'], '4');
+  });
+  for (final tipo in ['Doy en adopción', 'Busco adoptar']) {
+    testWidgets('$tipo permite publicar sin fecha del suceso', (tester) async {
+      final auth = AuthServiceMock();
+      final service = PublicacionServiceMock();
+      addTearDown(auth.dispose);
+      await auth.login(const LoginRequest('a@b.com', '12345678'));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicarMascotaPage(
+            auth: auth,
+            service: service,
+            ubicacion: UbicacionServiceMock(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tapVisible(
+        tester,
+        find.widgetWithText(
+          DropdownButtonFormField<int>,
+          '¿Qué querés publicar?',
+        ),
+      );
+      await tester.tap(find.text(tipo).last);
+      await tester.pumpAndSettle();
+      expect(find.text('Elegir fecha del suceso'), findsNothing);
+      expect(
+        find.widgetWithText(TextFormField, 'Nombre (opcional)'),
+        tipo == 'Busco adoptar' ? findsNothing : findsOneWidget,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Descripción'),
+        'Buscamos adoptar un gatito.',
+      );
+      await elegirLocalidad(tester);
+      if (tipo == 'Doy en adopción') {
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Zona aproximada'),
+          'Centro',
+        );
+      }
+      await tapVisible(tester, find.text('Publicar'));
+      expect(service.creada, isNull); // Sigue exigiendo contacto.
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Información de contacto'),
+        'ana@example.com',
+      );
+      await tapVisible(tester, find.text('Publicar'));
+      expect(service.creada!.tipoPublicacion, tipo == 'Busco adoptar' ? 4 : 3);
+      expect(service.creada!.fechaSuceso, isNull);
+      expect(service.creada!.toJson().containsKey('fechaSuceso'), false);
+      if (tipo == 'Busco adoptar') {
+        expect(service.creada!.toJson().containsKey('nombreMascota'), false);
+        expect(service.creada!.zona, '');
+      }
+    });
+  }
   late AuthServiceMock auth;
   late PublicacionServiceMock mascotas;
   late RecomendacionServiceMock recomendaciones;

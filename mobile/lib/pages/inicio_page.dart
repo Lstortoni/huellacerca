@@ -56,7 +56,8 @@ class InicioPage extends StatelessWidget {
                     const SizedBox(height: 28),
                     TarjetaInicio(
                       titulo: 'Buscar mascotas',
-                      descripcion: 'Mascotas perdidas y encontradas.',
+                      descripcion:
+                          'Mascotas perdidas, encontradas y en adopción.',
                       icono: Icons.pets_outlined,
                       onTap: () => Navigator.of(context).pushNamed('/mascotas'),
                     ),
@@ -83,13 +84,19 @@ class InicioPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       TarjetaInicio(
-                        titulo: 'Publicar mascota',
-                        descripcion:
-                            'Avisá si perdiste o encontraste una mascota.',
+                        titulo: 'Publicar un aviso',
+                        descripcion: 'Perdí o encontré una mascota, doy en adopción o busco adoptar.',
                         icono: Icons.campaign_outlined,
                         onTap: () =>
                             Navigator.of(context)
                                 .pushNamed('/mascotas/publicar'),
+                      ),
+                      TarjetaInicio(
+                        titulo: 'Mis publicaciones',
+                        descripcion: 'Consultá tus avisos de mascotas y marcá los casos resueltos.',
+                        icono: Icons.article_outlined,
+                        onTap: () =>
+                            Navigator.of(context).pushNamed('/mascotas/mias'),
                       ),
                       TarjetaInicio(
                         titulo: 'Recomendar un servicio',

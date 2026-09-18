@@ -10,7 +10,7 @@ public sealed class PublicacionMascotaConfiguration : IEntityTypeConfiguration<P
     {
         b.ToTable("publicaciones_mascotas", t =>
         {
-            t.HasCheckConstraint("CK_publicaciones_mascotas_tipo", "\"TipoPublicacion\" IN (1, 2)");
+            t.HasCheckConstraint("CK_publicaciones_mascotas_tipo", "\"TipoPublicacion\" IN (1, 2, 3, 4)");
             t.HasCheckConstraint("CK_publicaciones_mascotas_mascota", "\"TipoMascota\" IN (1, 2, 3)");
             t.HasCheckConstraint("CK_publicaciones_mascotas_estado", "\"Estado\" IN (1, 2)");
         });
@@ -42,4 +42,3 @@ public sealed class FotoPublicacionConfiguration : IEntityTypeConfiguration<Foto
         b.HasIndex(x => new { x.PublicacionMascotaId, x.Orden }).IsUnique();
     }
 }
-

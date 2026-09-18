@@ -253,7 +253,7 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateOnly>("FechaSuceso")
+                    b.Property<DateOnly?>("FechaSuceso")
                         .HasColumnType("date");
 
                     b.Property<string>("InformacionContacto")
@@ -296,7 +296,7 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
 
                             t.HasCheckConstraint("CK_publicaciones_mascotas_mascota", "\"TipoMascota\" IN (1, 2, 3)");
 
-                            t.HasCheckConstraint("CK_publicaciones_mascotas_tipo", "\"TipoPublicacion\" IN (1, 2)");
+                            t.HasCheckConstraint("CK_publicaciones_mascotas_tipo", "\"TipoPublicacion\" IN (1, 2, 3, 4)");
                         });
                 });
 

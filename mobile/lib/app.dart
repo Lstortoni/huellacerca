@@ -8,6 +8,7 @@ import 'pages/login_page.dart';
 import 'pages/registro_page.dart';
 import 'pages/perfil_page.dart';
 import 'pages/mascotas_page.dart';
+import 'pages/mis_publicaciones_page.dart';
 import 'pages/publicar_mascota_page.dart';
 import 'pages/recomendaciones_page.dart';
 import 'pages/recomendar_servicio_page.dart';
@@ -54,6 +55,11 @@ class _HuellaCercaAppState extends State<HuellaCercaApp> {
       '/servicios': (_) => RecomendacionesPage(
         auth: getIt<AuthService>(),
         service: getIt<RecomendacionService>(),
+        ubicacion: getIt<UbicacionService>(),
+      ),
+      '/mascotas/mias': (_) => MisPublicacionesPage(
+        auth: getIt<AuthService>(),
+        service: getIt<PublicacionService>(),
         ubicacion: getIt<UbicacionService>(),
       ),
       '/mascotas/publicar': (_) => PublicarMascotaPage(

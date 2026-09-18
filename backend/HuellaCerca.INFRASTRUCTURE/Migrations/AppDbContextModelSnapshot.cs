@@ -23,6 +23,66 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("HuellaCerca.MODEL.AspectoRecomendacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("aspectos_recomendacion", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000001"),
+                            Activo = true,
+                            Nombre = "Buena atención"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000002"),
+                            Activo = true,
+                            Nombre = "Responsabilidad"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000003"),
+                            Activo = true,
+                            Nombre = "Cumplimiento"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000004"),
+                            Activo = true,
+                            Nombre = "Buen trato con la mascota"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000005"),
+                            Activo = true,
+                            Nombre = "Rapidez"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000006"),
+                            Activo = true,
+                            Nombre = "Buena comunicación"
+                        });
+                });
+
             modelBuilder.Entity("HuellaCerca.MODEL.FotoPublicacion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -306,11 +366,6 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Descripcion")
-                        .IsRequired()
-                        .HasMaxLength(3000)
-                        .HasColumnType("character varying(3000)");
-
                     b.Property<DateTime?>("FechaActualizacion")
                         .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
@@ -324,20 +379,31 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                     b.Property<Guid>("PrestadorServicioId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("FechaCreacion");
 
-                    b.HasIndex("MascoteroId");
-
                     b.HasIndex("PrestadorServicioId");
 
+                    b.HasIndex("MascoteroId", "PrestadorServicioId")
+                        .IsUnique();
+
                     b.ToTable("recomendaciones", (string)null);
+                });
+
+            modelBuilder.Entity("HuellaCerca.MODEL.RecomendacionAspecto", b =>
+                {
+                    b.Property<Guid>("RecomendacionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AspectoRecomendacionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RecomendacionId", "AspectoRecomendacionId");
+
+                    b.HasIndex("AspectoRecomendacionId");
+
+                    b.ToTable("recomendaciones_aspectos", (string)null);
                 });
 
             modelBuilder.Entity("HuellaCerca.MODEL.RefreshToken", b =>
@@ -592,6 +658,25 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                     b.Navigation("PrestadorServicio");
                 });
 
+            modelBuilder.Entity("HuellaCerca.MODEL.RecomendacionAspecto", b =>
+                {
+                    b.HasOne("HuellaCerca.MODEL.AspectoRecomendacion", "AspectoRecomendacion")
+                        .WithMany()
+                        .HasForeignKey("AspectoRecomendacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HuellaCerca.MODEL.Recomendacion", "Recomendacion")
+                        .WithMany("Aspectos")
+                        .HasForeignKey("RecomendacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AspectoRecomendacion");
+
+                    b.Navigation("Recomendacion");
+                });
+
             modelBuilder.Entity("HuellaCerca.MODEL.RefreshToken", b =>
                 {
                     b.HasOne("HuellaCerca.MODEL.Usuario", "Usuario")
@@ -642,6 +727,11 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
             modelBuilder.Entity("HuellaCerca.MODEL.PublicacionMascota", b =>
                 {
                     b.Navigation("Fotografias");
+                });
+
+            modelBuilder.Entity("HuellaCerca.MODEL.Recomendacion", b =>
+                {
+                    b.Navigation("Aspectos");
                 });
 
             modelBuilder.Entity("HuellaCerca.MODEL.Usuario", b =>

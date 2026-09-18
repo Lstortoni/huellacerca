@@ -56,6 +56,11 @@ class AuthServiceMock extends ChangeNotifier implements AuthService {
   @override
   Future<Object?> patchProtegido(String path) => throw UnimplementedError();
   @override
+  Future<Object?> putProtegido(String path, Map<String, Object?> body) =>
+      throw UnimplementedError();
+  @override
+  Future<void> deleteProtegido(String path) => throw UnimplementedError();
+  @override
   void dispose() {
     disposals++;
     super.dispose();

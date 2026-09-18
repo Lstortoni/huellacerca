@@ -150,3 +150,30 @@ El proyecto Flutter está en `mobile/`, con inicio público y una barra de cuent
 ## Modelo de publicaciones de mascotas
 
 Consultar [entidades, relaciones y próximos pasos](docs/publicaciones-mascotas.md).
+## Recomendaciones positivas con aspectos
+
+`Recomendacion` une un Mascotero con un PrestadorServicio y mantiene sus fechas.
+Una restricción única en PostgreSQL impide más de una por ese par.
+`AspectoRecomendacion` es el catálogo del sistema (seis aspectos iniciales).
+`RecomendacionAspecto` vincula cada recomendación con cero o varios aspectos, con clave compuesta.
+
+POST de una ficha ya recomendada devuelve 200 con la recomendación existente, sin borrar aspectos. Una nueva devuelve 201. El alta conjunta de prestador y recomendación es transaccional.
+Los aspectos se reemplazan con PUT; eliminar todos no retira el voto.
+Los conteos se calculan desde los votos y sus relaciones, sin columnas de totales que puedan quedar desactualizadas.
+
+- Público: GET /api/prestadores, /api/prestadores/{id}, /api/prestadores/similares, /api/aspectos-recomendacion.
+- Con JWT: POST /api/recomendaciones, GET /api/recomendaciones/mias, GET /api/recomendaciones/{id}, PUT /api/recomendaciones/{id}/aspectos, DELETE /api/recomendaciones/{id}.
+- Se retiraron GET /api/recomendaciones y el PUT de texto libre. Actualizar la app junto con la API.
+
+Servicios recomendados es una consulta pública de solo lectura: solo lista fichas con votos y muestra cantidades, aspectos y nombres de los mascoteros. GET /api/prestadores/{id}/recomendadores devuelve esos nombres paginados, sin datos privados de contacto. La edición de aspectos y el retiro del voto quedan en el recorrido Recomendar un servicio. Las fichas sin votos siguen disponibles en similares para evitar crear otra al recomendarlas nuevamente.
+
+### Migración de recomendaciones existentes
+
+`20260918163431_RecomendacionesConAspectos` copia las recomendaciones previas a `recomendaciones_textos_respaldo` antes de quitar Titulo/Descripcion.
+El respaldo conserva todos los datos originales, la fecha del respaldo y el ID que se conserva para cada par mascotero/prestador.
+Si había varias recomendaciones del mismo par, conserva como voto la más antigua (desempate por ID); las anteriores quedan sin aspectos.
+El respaldo no está expuesto en la API ni modelado por EF.
+
+La migración corre en una transacción con bloqueo de la tabla. No modifica migraciones anteriores.
+**No tiene Down automático**: restaurar la versión anterior requiere una operación explícita y un respaldo completo de la base; el archivo de textos no incluye cambios posteriores ni reemplaza un backup.
+No eliminar el volumen Docker para migrar. El servicio huellacerca_migrations aplica el cambio antes de iniciar la API.

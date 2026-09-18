@@ -175,6 +175,17 @@ class AuthServiceApi extends ChangeNotifier implements AuthService {
   @override
   Future<Object?> patchProtegido(String path) =>
       _protegido((token) => _api.enviarJson('PATCH', path, accessToken: token));
+  @override
+  Future<Object?> putProtegido(String path, Map<String, Object?> body) =>
+      _protegido(
+        (token) => _api.enviarJson('PUT', path, accessToken: token, body: body),
+      );
+  @override
+  Future<void> deleteProtegido(String path) async {
+    await _protegido(
+      (token) => _api.enviarJson('DELETE', path, accessToken: token),
+    );
+  }
 
   Future<Object?> _protegido(
     Future<Object?> Function(String token) enviar,

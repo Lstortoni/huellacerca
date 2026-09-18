@@ -7,7 +7,8 @@ import '../services/contracts/ubicacion_service.dart';
 import '../widgets/barra_superior.dart';
 import '../widgets/campo_ubicacion.dart';
 import '../widgets/contenido_formulario.dart';
-import 'recomendacion_detalle_page.dart';
+import '../widgets/gestion_recomendacion.dart';
+import 'prestador_detalle_page.dart';
 
 class RecomendarServicioPage extends StatefulWidget {
   const RecomendarServicioPage({
@@ -29,13 +30,10 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
   final _nombre = TextEditingController(),
       _direccion = TextEditingController(),
       _telefono = TextEditingController(),
-      _enlace = TextEditingController(),
-      _titulo = TextEditingController(),
-      _descripcion = TextEditingController();
+      _enlace = TextEditingController();
   late Future<List<RubroDto>> _rubros;
   String? _rubro, _localidad, _error;
   List<PrestadorDto>? _similares;
-  PrestadorDto? _elegido;
   bool _nuevo = false, _buscando = false, _guardando = false;
   int _revision = 0;
   @override
@@ -46,14 +44,7 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
 
   @override
   void dispose() {
-    for (final c in [
-      _nombre,
-      _direccion,
-      _telefono,
-      _enlace,
-      _titulo,
-      _descripcion,
-    ]) {
+    for (final c in [_nombre, _direccion, _telefono, _enlace]) {
       c.dispose();
     }
     super.dispose();
@@ -62,7 +53,6 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
   void _invalidar() => setState(() {
     _revision++;
     _similares = null;
-    _elegido = null;
     _nuevo = false;
     _error = null;
     _buscando = false;
@@ -74,7 +64,6 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
       _buscando = true;
       _error = null;
       _similares = null;
-      _elegido = null;
       _nuevo = false;
     });
     try {
@@ -96,9 +85,7 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
   String? _opcional(TextEditingController c) =>
       c.text.trim().isEmpty ? null : c.text.trim();
   Future<void> _guardar() async {
-    if (_guardando ||
-        !_crearForm.currentState!.validate() ||
-        (!_nuevo && _elegido == null)) {
+    if (_guardando || !_crearForm.currentState!.validate() || !_nuevo) {
       return;
     }
     setState(() {
@@ -108,26 +95,22 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
     try {
       final r = await widget.service.crear(
         CrearRecomendacionRequest(
-          titulo: _titulo.text.trim(),
-          descripcion: _descripcion.text.trim(),
-          prestadorServicioId: _elegido?.id,
-          nuevoPrestador: !_nuevo
-              ? null
-              : NuevoPrestadorRequest(
-                  nombre: _nombre.text.trim(),
-                  rubroId: _rubro!,
-                  localidadId: _localidad!,
-                  direccion: _opcional(_direccion),
-                  telefono: _opcional(_telefono),
-                  enlace: _opcional(_enlace),
-                ),
+          nuevoPrestador: NuevoPrestadorRequest(
+            nombre: _nombre.text.trim(),
+            rubroId: _rubro!,
+            localidadId: _localidad!,
+            direccion: _opcional(_direccion),
+            telefono: _opcional(_telefono),
+            enlace: _opcional(_enlace),
+          ),
         ),
       );
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => RecomendacionDetallePage(
-            id: r.id,
+          builder: (_) => PrestadorDetallePage(
+            permitirGestion: true,
+            id: r.prestador.id,
             auth: widget.auth,
             service: widget.service,
           ),
@@ -138,6 +121,20 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
+  }
+
+  Future<void> _verPrestador(String id) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PrestadorDetallePage(
+          permitirGestion: true,
+          id: id,
+          auth: widget.auth,
+          service: widget.service,
+        ),
+      ),
+    );
+    if (mounted) setState(() => _revision++);
   }
 
   @override
@@ -172,8 +169,9 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {
                         return TextButton(
-                          onPressed: () =>
-                              setState(() => _rubros = widget.service.rubros()),
+                          onPressed: () => setState(() {
+                            _rubros = widget.service.rubros();
+                          }),
                           child: const Text(
                             'No pudimos cargar rubros. Reintentar',
                           ),
@@ -229,22 +227,28 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
               ),
               ..._similares!.map(
                 (p) => Card(
-                  child: ListTile(
-                    selected: _elegido?.id == p.id,
-                    title: Text(p.nombre),
-                    subtitle: Text(
-                      '${p.rubro} · ${p.localidad}${p.direccion == null ? '' : '\n${p.direccion}'}',
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          p.nombre,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text('${p.rubro} · ${p.localidad}'),
+                        if (p.direccion != null) Text(p.direccion!),
+                        GestionRecomendacion(
+                          key: ValueKey('$_revision:${p.id}'),
+                          prestadorId: p.id,
+                          auth: widget.auth,
+                          service: widget.service,
+                          compacto: true,
+                          onChanged: () async => _verPrestador(p.id),
+                          onEditar: () => _verPrestador(p.id),
+                        ),
+                      ],
                     ),
-                    trailing: _elegido?.id == p.id
-                        ? const Icon(Icons.check_circle)
-                        : null,
-                    onTap: _guardando
-                        ? null
-                        : () => setState(() {
-                            _elegido = p;
-                            _nuevo = false;
-                            _error = null;
-                          }),
                   ),
                 ),
               ),
@@ -253,13 +257,12 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
                     ? null
                     : () => setState(() {
                         _nuevo = true;
-                        _elegido = null;
                         _error = null;
                       }),
                 child: const Text('Es otro servicio: crear uno nuevo'),
               ),
             ],
-            if (_nuevo || _elegido != null)
+            if (_nuevo)
               Form(
                 key: _crearForm,
                 child: Column(
@@ -267,71 +270,46 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
                   children: [
                     const SizedBox(height: 16),
                     Text(
-                      _nuevo
-                          ? 'Nuevo servicio: ${_nombre.text.trim()}'
-                          : 'Vas a recomendar: ${_elegido!.nombre}',
+                      'Nuevo servicio: ${_nombre.text.trim()}',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    if (_nuevo) ...[
-                      TextFormField(
-                        controller: _direccion,
-                        enabled: !_guardando,
-                        maxLength: 250,
-                        decoration: const InputDecoration(
-                          labelText: 'Dirección (opcional)',
-                        ),
-                      ),
-                      TextFormField(
-                        controller: _telefono,
-                        enabled: !_guardando,
-                        maxLength: 40,
-                        decoration: const InputDecoration(
-                          labelText: 'Teléfono (opcional)',
-                        ),
-                      ),
-                      TextFormField(
-                        controller: _enlace,
-                        enabled: !_guardando,
-                        maxLength: 500,
-                        decoration: const InputDecoration(
-                          labelText: 'Enlace (opcional)',
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return null;
-                          final uri = Uri.tryParse(v.trim());
-                          return uri != null &&
-                                  uri.host.isNotEmpty &&
-                                  (uri.scheme == 'http' ||
-                                      uri.scheme == 'https')
-                              ? null
-                              : 'Ingresá un enlace http:// o https:// válido.';
-                        },
-                      ),
-                    ],
                     TextFormField(
-                      controller: _titulo,
+                      controller: _direccion,
                       enabled: !_guardando,
-                      maxLength: 150,
-                      validator: requerido,
+                      maxLength: 250,
                       decoration: const InputDecoration(
-                        labelText: 'Título de tu recomendación',
+                        labelText: 'Dirección (opcional)',
                       ),
                     ),
                     TextFormField(
-                      controller: _descripcion,
+                      controller: _telefono,
                       enabled: !_guardando,
-                      maxLength: 3000,
-                      minLines: 3,
-                      maxLines: 6,
-                      validator: descripcionValida,
+                      maxLength: 40,
                       decoration: const InputDecoration(
-                        labelText: 'Contá tu experiencia',
+                        labelText: 'Teléfono (opcional)',
                       ),
+                    ),
+                    TextFormField(
+                      controller: _enlace,
+                      enabled: !_guardando,
+                      maxLength: 500,
+                      decoration: const InputDecoration(
+                        labelText: 'Enlace (opcional)',
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null;
+                        final uri = Uri.tryParse(v.trim());
+                        return uri != null &&
+                                uri.host.isNotEmpty &&
+                                (uri.scheme == 'http' || uri.scheme == 'https')
+                            ? null
+                            : 'Ingresá un enlace http:// o https:// válido.';
+                      },
                     ),
                     FilledButton(
                       onPressed: _guardando ? null : _guardar,
                       child: Text(
-                        _guardando ? 'Publicando…' : 'Publicar recomendación',
+                        _guardando ? 'Guardando…' : 'Crear y recomendar',
                       ),
                     ),
                   ],

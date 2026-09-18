@@ -32,12 +32,12 @@ Map<String, dynamic> prestadorJson() => {
   'direccion': 'Calle 1',
   'telefono': null,
   'enlace': null,
+  'totalRecomendaciones': 0,
+  'aspectos': [],
 };
 Map<String, dynamic> recomendacionJson() => {
   'id': 'recomendacion-1',
-  'autor': 'Ana',
-  'titulo': 'Buena atención',
-  'descripcion': 'Nos atendieron con mucha paciencia.',
+  'aspectos': [],
   'prestador': prestadorJson(),
 };
 
@@ -76,27 +76,98 @@ class PublicacionServiceMock implements PublicacionService {
 
 class RecomendacionServiceMock implements RecomendacionService {
   CrearRecomendacionRequest? creada;
+  RecomendacionDto? mia;
+  int creaciones = 0, retiros = 0;
+  List<String> guardados = [];
+  bool falloConsulta = false, falloCatalogo = false;
+  int consultasPropias = 0;
+  @override
+  Future<PaginaDto<MascoteroRecomiendaDto>> recomendadores(
+    String prestadorId, {
+    int pagina = 1,
+  }) async => PaginaDto(
+    [
+      MascoteroRecomiendaDto.fromJson({'nombre': 'Ana'}),
+    ],
+    1,
+    pagina,
+    20,
+  );
   @override
   Future<List<RubroDto>> rubros() async => [
     RubroDto.fromJson({'id': 'rubro-1', 'nombre': 'Veterinaria'}),
   ];
   @override
-  Future<PaginaDto<RecomendacionDto>> buscar({
+  Future<List<AspectoDto>> aspectos() async {
+    if (falloCatalogo) throw Exception('Catálogo no disponible');
+    return [
+      AspectoDto.fromJson({
+        'id': 'a1',
+        'nombre': 'Buena atención',
+        'activo': true,
+      }),
+      AspectoDto.fromJson({
+        'id': 'a2',
+        'nombre': 'Responsabilidad',
+        'activo': true,
+      }),
+    ];
+  }
+
+  @override
+  Future<PaginaDto<PrestadorDto>> buscar({
     Map<String, String> filtros = const {},
     int pagina = 1,
-  }) async => PaginaDto([await detalle('recomendacion-1')], 1, pagina, 20);
+  }) async => PaginaDto([await detalle('prestador-1')], 1, pagina, 20);
   @override
-  Future<RecomendacionDto> detalle(String id) async =>
-      RecomendacionDto.fromJson(recomendacionJson());
+  Future<PrestadorDto> detalle(String id) async => PrestadorDto.fromJson({
+    ...prestadorJson(),
+    'totalRecomendaciones': mia == null ? 0 : 1,
+    'aspectos': [
+      for (final a in mia?.aspectos ?? <AspectoDto>[])
+        {'id': a.id, 'nombre': a.nombre, 'cantidad': 1},
+    ],
+  });
+  @override
+  Future<RecomendacionDto?> miRecomendacion(String prestadorId) async {
+    consultasPropias++;
+    if (falloConsulta) throw Exception('Consulta no disponible');
+    return mia;
+  }
+
   @override
   Future<List<PrestadorDto>> similares({
     required String nombre,
     required String rubroId,
     required String localidadId,
-  }) async => [PrestadorDto.fromJson(prestadorJson())];
+  }) async => [await detalle('prestador-1')];
   @override
   Future<RecomendacionDto> crear(CrearRecomendacionRequest request) async {
     creada = request;
-    return detalle('recomendacion-1');
+    creaciones++;
+    return mia ??= RecomendacionDto.fromJson(recomendacionJson());
+  }
+
+  @override
+  Future<RecomendacionDto> guardarAspectos(
+    String id,
+    List<String> aspectoIds,
+  ) async {
+    guardados = aspectoIds;
+    mia = RecomendacionDto.fromJson({
+      ...recomendacionJson(),
+      'aspectos': [
+        for (final a in await aspectos())
+          if (aspectoIds.contains(a.id))
+            {'id': a.id, 'nombre': a.nombre, 'activo': a.activo},
+      ],
+    });
+    return mia!;
+  }
+
+  @override
+  Future<void> retirar(String id) async {
+    retiros++;
+    mia = null;
   }
 }

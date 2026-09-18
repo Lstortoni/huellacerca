@@ -8,7 +8,7 @@ import '../widgets/barra_superior.dart';
 import '../widgets/campo_ubicacion.dart';
 import '../widgets/contenido_formulario.dart';
 import '../widgets/lista_paginada.dart';
-import 'recomendacion_detalle_page.dart';
+import 'prestador_detalle_page.dart';
 
 class RecomendacionesPage extends StatefulWidget {
   const RecomendacionesPage({
@@ -58,12 +58,12 @@ class _RecomendacionesPageState extends State<RecomendacionesPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Experiencias compartidas por la comunidad.'),
+          const Text('Servicios recomendados por la comunidad.'),
           TextField(
             controller: _texto,
             maxLength: 150,
             decoration: const InputDecoration(
-              labelText: 'Buscar servicio o recomendación',
+              labelText: 'Nombre del servicio o negocio',
             ),
             onSubmitted: (_) => _buscar(),
           ),
@@ -72,8 +72,9 @@ class _RecomendacionesPageState extends State<RecomendacionesPage> {
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return TextButton(
-                  onPressed: () =>
-                      setState(() => _rubros = widget.service.rubros()),
+                  onPressed: () => setState(() {
+                    _rubros = widget.service.rubros();
+                  }),
                   child: const Text('No pudimos cargar rubros. Reintentar'),
                 );
               }
@@ -104,26 +105,29 @@ class _RecomendacionesPageState extends State<RecomendacionesPage> {
           ),
           FilledButton(onPressed: _buscar, child: const Text('Buscar')),
           const SizedBox(height: 20),
-          ListaPaginada<RecomendacionDto>(
+          ListaPaginada<PrestadorDto>(
             key: ValueKey(_revision),
             cargar: (pagina) =>
                 widget.service.buscar(filtros: _filtros, pagina: pagina),
-            itemBuilder: (r, _) => Card(
+            itemBuilder: (r, recargar) => Card(
               child: ListTile(
                 leading: const Icon(Icons.storefront_outlined),
-                title: Text(r.prestador.nombre),
+                title: Text(r.nombre),
                 subtitle: Text(
-                  '${r.prestador.rubro} · ${r.prestador.localidad}\n${r.titulo} — ${r.autor}',
+                  '${r.rubro} · ${r.localidad}\n${r.textoRecomendaciones}',
                 ),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => RecomendacionDetallePage(
-                      id: r.id,
-                      auth: widget.auth,
-                      service: widget.service,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => PrestadorDetallePage(
+                        id: r.id,
+                        auth: widget.auth,
+                        service: widget.service,
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                  if (mounted) recargar();
+                },
               ),
             ),
           ),

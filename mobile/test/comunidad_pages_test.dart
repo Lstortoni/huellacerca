@@ -6,7 +6,7 @@ import 'package:huella_cerca/pages/mis_publicaciones_page.dart';
 import 'package:huella_cerca/pages/publicacion_detalle_page.dart';
 import 'package:huella_cerca/pages/publicar_mascota_page.dart';
 import 'package:huella_cerca/pages/recomendar_servicio_page.dart';
-import 'package:huella_cerca/pages/recomendacion_detalle_page.dart';
+import 'package:huella_cerca/pages/prestador_detalle_page.dart';
 
 import 'support/service_mocks.dart';
 import 'support/comunidad_mocks.dart';
@@ -283,28 +283,16 @@ void main() {
         await tapVisible(tester, find.text('Buscar similares'));
         await tapVisible(
           tester,
-          find.text(
-            nuevo
-                ? 'Es otro servicio: crear uno nuevo'
-                : 'Veterinaria del barrio',
-          ),
+          find.text(nuevo ? 'Es otro servicio: crear uno nuevo' : 'Recomendar'),
         );
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'Título de tu recomendación'),
-          'Buena atención',
-        );
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'Contá tu experiencia'),
-          'Nos atendieron muy bien.',
-        );
-        await tapVisible(tester, find.text('Publicar recomendación'));
+        if (nuevo) await tapVisible(tester, find.text('Crear y recomendar'));
         expect(recomendaciones.creada, isNotNull);
         expect(recomendaciones.creada!.nuevoPrestador != null, nuevo);
         expect(
           recomendaciones.creada!.prestadorServicioId,
           nuevo ? null : 'prestador-1',
         );
-        expect(find.byType(RecomendacionDetallePage), findsOneWidget);
+        expect(find.byType(PrestadorDetallePage), findsOneWidget);
       },
     );
   }
@@ -334,13 +322,13 @@ void main() {
     await tester.pumpAndSettle();
     await elegirLocalidad(tester);
     await tapVisible(tester, find.text('Buscar similares'));
-    await tapVisible(tester, find.text('Veterinaria del barrio'));
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Nombre del servicio o negocio'),
       'Peluquería',
     );
     await tester.pumpAndSettle();
-    expect(find.text('Publicar recomendación'), findsNothing);
+    expect(find.text('Recomendar'), findsNothing);
+    expect(find.text('Veterinaria del barrio'), findsNothing);
   });
   testWidgets('Formularios requieren sesión', (tester) async {
     await tester.pumpWidget(

@@ -29,7 +29,7 @@ lib/
     publicacion_detalle_page.dart
     publicar_mascota_page.dart
     recomendaciones_page.dart
-    recomendacion_detalle_page.dart
+    prestador_detalle_page.dart
     recomendar_servicio_page.dart
   services/
     contracts/
@@ -98,7 +98,7 @@ En mascotas se muestran activas por defecto. Se puede filtrar Perdida/Encontrada
 
 En recomendaciones, la selección de un prestador similar evita crear uno nuevo. También se permite crear otro aunque haya coincidencias. Modificar nombre, rubro o localidad invalida la búsqueda y selección previas. El DTO de creación envía solo prestadorServicioId o nuevoPrestador, nunca ambos. Dirección, teléfono y enlace son opcionales para el nuevo prestador. No hay llamadas a Google Places.
 
-Las búsquedas incluyen estados de carga, error con reintento, resultados vacíos y páginas de 20 elementos. Los formularios validan campos, deshabilitan envío mientras guardan y requieren sesión. La carga/visualización de fotografías queda pendiente: se permite publicar sin fotos y no se envían rutas ficticias. Esta etapa no incluye editar/eliminar recomendaciones desde la app, aunque la API ya dispone de esas operaciones.
+Las búsquedas incluyen estados de carga, error con reintento, resultados vacíos y páginas de 20 elementos. Los formularios validan campos, deshabilitan envío mientras guardan y requieren sesión. La carga/visualización de fotografías queda pendiente: se permite publicar sin fotos y no se envían rutas ficticias. Se pueden modificar los aspectos seleccionados y retirar la recomendación desde la ficha del prestador.
 
 La pantalla de inicio es un `StatelessWidget`: su información cambiante está en `AuthService`, que avisa a `ListenableBuilder`. No necesita su propia carga de provincias ni estado local. La disposición vertical permite desplazarse y limita el ancho en pantallas grandes.
 
@@ -193,7 +193,7 @@ Los mocks viven en `test/support/`. Las pruebas de HTTP usan transporte y almace
 
 `SelectorLocalidad` consulta páginas de 20 resultados y permite buscar por nombre. Cambiar de provincia borra la localidad seleccionada para evitar una combinación incorrecta.
 
-La edición de perfil, recuperación de contraseña, publicaciones de mascotas y pantallas de recomendaciones quedan para los próximos bloques. La autenticación está preparada y probada inicialmente en Android; iOS necesita su verificación y configuración en macOS antes de publicarse.
+La edición de perfil, recuperación de contraseña y subida de fotografías quedan pendientes. La autenticación está preparada y probada inicialmente en Android; iOS necesita su verificación y configuración en macOS antes de publicarse.
 
 ### Prueba de integración Android y API local
 
@@ -208,3 +208,18 @@ Crea una cuenta `hc-mobile-test-*` en la base local, que queda como dato de prue
 Después de una prueba de integración, ejecutar `flutter run -d emulator-5554` para volver a instalar la app normal. Al agregar este plugin nativo se necesita detener y volver a ejecutar Flutter; hot reload por sí solo no lo incorpora.
 
 Mis publicaciones (/mascotas/mias) es un acceso autenticado del inicio: reutiliza la búsqueda fijando MascoteroId y muestra todos los estados inicialmente. Conserva el autor al aplicar filtros y retira el listado al cerrar sesión. La búsqueda pública mantiene Solo mis publicaciones como filtro opcional. Las etiquetas de búsqueda describen avisos ajenos (Mascotas en adopción / Personas que quieren adoptar) y las de creación expresan la intención del autor (Doy en adopción / Busco adoptar).
+## Recomendaciones con aspectos
+
+1. `RecomendarServicioPage` busca similares por nombre, rubro y localidad.
+2. `GestionRecomendacion` consulta si el usuario ya recomienda cada ficha. “Recomendar” guarda el voto y abre `PrestadorDetallePage`. Si ya lo recomienda, ofrece modificar aspectos.
+3. Si no reconoce ningún resultado, “Es otro servicio: crear uno nuevo” permite completar datos opcionales y “Crear y recomendar”.
+4. Desde este recorrido se abre la ficha con `permitirGestion: true`. La recomendación ya está guardada: elegir aspectos es opcional.
+5. “Guardar aspectos” reemplaza la selección, incluso por una lista vacía. “Retirar recomendación” pide confirmación y elimina el voto.
+
+El servicio sigue inyectado por su contrato con get_it. `RecomendacionServiceApi` consume la API pública para prestadores/catálogo y usa `AuthService` para GET/POST/PUT/DELETE protegidos. Las Pages no construyen HTTP ni JWT.
+
+El listado público devuelve prestadores (una ficha por ID), no opiniones individuales. No hay título, comentario ni estrellas. Se permiten fichas parecidas: la unicidad del voto corresponde a un par mascotero/prestador, no a la identidad real de un comercio.
+
+Desde **Servicios recomendados**, la ficha es pública y de solo lectura, incluso con sesión iniciada. Muestra datos del servicio, cantidad de recomendaciones, aspectos agregados y nombres de quienes lo recomiendan (paginados). No consulta la recomendación propia ni ofrece recomendar, guardar aspectos, retirar o iniciar sesión para recomendar. Estas acciones se ofrecen exclusivamente desde **Recomendar un servicio**.
+
+El listado público excluye prestadores con cero recomendaciones. Esas fichas permanecen en la búsqueda de similares del recorrido para recomendar.

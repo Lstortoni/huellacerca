@@ -36,9 +36,9 @@ Los JSON de esta guía ya usan esos IDs. Si recreás la base desde cero, los IDs
 
 ### Cuándo hace falta un token
 
-**Sin JWT:** registro, login, ubicación, rubros, búsqueda y detalle de prestadores, búsqueda y detalle de recomendaciones.
+**Sin JWT:** registro, login, ubicación, rubros, catálogo de aspectos, búsqueda y detalle de prestadores.
 
-**Con JWT:** consultar mi perfil, crear, editar y eliminar recomendaciones.
+**Con JWT:** consultar mi perfil, consultar mis recomendaciones, recomendar, modificar aspectos y retirar recomendaciones.
 
 **Refresh y logout:** no llevan JWT, pero sí el refresh token en el JSON.
 
@@ -299,226 +299,192 @@ Una búsqueda válida sin coincidencias devuelve **200 con lista vacía**, no 40
 
 ## 3 — PrestadoresController
 
-Prestador significa el negocio o persona recomendada. La recomendación es la experiencia que publica el mascotero sobre ese prestador.
+Un prestador es el negocio o persona recomendada. Una recomendación significa que un mascotero recomienda esa ficha. No tiene título, comentario libre ni estrellas.
 
-### a) Rubros
+### a) Listar rubros
 
-**Método:** GET  
-**Token:** No.  
-**JSON:** No lleva.
+**GET** `http://localhost:5080/api/rubros`
 
-```text
-http://localhost:5080/api/rubros
-```
+**JWT en Authorization:** No; seleccionar No Auth. **Body:** ninguno.
 
-**Esperado:** `200 OK`, los rubros activos. Veterinaria tiene ID `10000000-0000-0000-0000-000000000001`.
+Esperado: `200`, lista de rubros con `id` y `nombre`.
 
 ### b) Buscar prestadores similares
 
-**Método:** GET  
-**Token:** No.  
-**JSON:** No lleva.
+**GET**, sin JWT y sin body:
 
 ```text
-http://localhost:5080/api/prestadores/similares?nombre=Veterinaria%20Los%20Tilos&rubroId=10000000-0000-0000-0000-000000000001&localidadId=72d8db28-0357-4141-a29a-5596d92ecf4f&limite=10
+http://localhost:5080/api/prestadores/similares?nombre=Veterinaria%20Los%20Tilos&rubroId=10000000-0000-0000-0000-000000000001&localidadId=LOCALIDAD_ID&limite=10
 ```
 
-**Esperado:** `200 OK`, lista de fichas similares. Puede estar vacía si todavía nadie cargó ese lugar. El usuario puede elegir una ficha o crear otra al publicar su recomendación.
+Reemplazar LOCALIDAD_ID por una localidad de las consultas de ubicación.
+Esperado: `200`, lista de fichas similares, posiblemente vacía. Cada ficha incluye `totalRecomendaciones` y `aspectos` con sus cantidades.
 
-Nombre, rubro y localidad son necesarios; límite entre 1 y 20. Rubro/localidad inválidos o inactivos: 400.
-
-Después de crear la recomendación de 4.a, repetí esta búsqueda para encontrar el prestador nuevo.
+Puede haber varias fichas del mismo negocio real. La búsqueda ayuda a reconocerlo, pero no garantiza detectar duplicados ni bloquea nombres similares.
 
 ### c) Consultar un prestador
 
-**Método:** GET  
-**Token:** No.  
-**JSON:** No lleva.
+**GET** `http://localhost:5080/api/prestadores/PRESTADOR_ID`
+
+**JWT:** No. **Body:** ninguno.
+
+Esperado: `200`, nombre, rubro, localidad, contacto, total de personas que recomiendan y aspectos agregados. PRESTADOR_ID es `prestador.id` de 4.a.
+
+### d) Buscar servicios recomendados
+
+**GET**, sin JWT y sin body:
 
 ```text
-http://localhost:5080/api/prestadores/PRESTADOR_ID
+http://localhost:5080/api/prestadores?pagina=1&tamanoPagina=20
+http://localhost:5080/api/prestadores?busqueda=Tilos&rubroId=10000000-0000-0000-0000-000000000001&localidadId=LOCALIDAD_ID&pagina=1&tamanoPagina=20
 ```
 
-**Reemplazar PRESTADOR_ID** por el `id` de una ficha obtenida en similares o por `prestador.id` de una recomendación.
+Filtros opcionales: `busqueda` (nombre), `rubroId`, `provinciaId`, `localidadId`.
+Esperado: `200`, `items`, `total`, `pagina`, `tamanoPagina`.
+Una fila por ficha de prestador, ordenadas por cantidad de recomendaciones y nombre.
+Solo aparecen fichas con al menos una recomendación. Si se retiran todas, la ficha deja de aparecer en este listado; sigue disponible en similares para volver a recomendarla sin crear otra.
 
-**Esperado:** `200 OK`, nombre, rubro, localidad y contacto. Un GUID inexistente devuelve 404.
+### e) Catálogo de aspectos positivos
 
-No hay un POST separado para crear prestadores: se crean junto con una recomendación, como se muestra abajo.
+**GET** `http://localhost:5080/api/aspectos-recomendacion`
+
+**JWT:** No. **Body:** ninguno.
+
+Esperado: `200`, aspectos activos con `id`, `nombre`, `activo`.
+Iniciales: Buena atención, Responsabilidad, Cumplimiento, Buen trato con la mascota, Rapidez y Buena comunicación.
+Los usuarios seleccionan estos IDs; no crean textos propios.
+
+### f) Personas que recomiendan un prestador
+
+**GET** `http://localhost:5080/api/prestadores/PRESTADOR_ID/recomendadores?pagina=1&tamanoPagina=20`
+
+**JWT:** No; seleccionar No Auth. **Body:** ninguno.
+
+Esperado: `200`, página con `items: [{ "nombre": "Leo" }]`, `total`, `pagina` y `tamanoPagina`. Incluye a quienes recomendaron sin seleccionar aspectos. Expone únicamente el nombre, sin apellido, email, teléfono ni identificadores de cuenta.
+Un prestador inexistente devuelve `404`. Página menor a 1 o tamaño fuera de 1–100 devuelve `400`.
+
+En la app, **Servicios recomendados** utiliza estas consultas públicas y muestra una ficha de solo lectura. Las acciones para recomendar y administrar aspectos se acceden desde **Recomendar un servicio**.
 
 ## 4 — RecomendacionesController
 
-### a) Crear recomendación con prestador nuevo
+En todos los endpoints de esta sección: **Authorization → Bearer Token → accessToken** obtenido del registro/login. No enviar el refreshToken.
+En POST/PUT: **Body → raw → JSON**.
 
-**Método:** POST  
-**Token:** **Sí, accessToken en Bearer Token.**
+### a) Crear un prestador y recomendarlo
 
-```text
-http://localhost:5080/api/recomendaciones
-```
+**POST** `http://localhost:5080/api/recomendaciones`
 
 ```json
 {
   "nuevoPrestador": {
-    "nombre": "Veterinaria Los Tilos - Prueba manual",
+    "nombre": "Veterinaria Los Tilos",
     "rubroId": "10000000-0000-0000-0000-000000000001",
-    "localidadId": "72d8db28-0357-4141-a29a-5596d92ecf4f",
-    "direccion": "Direccion de ejemplo, Lanus",
-    "telefono": "1100000000",
+    "localidadId": "REEMPLAZAR_CON_LOCALIDAD_ID",
+    "direccion": "Calle 12 entre 50 y 51",
+    "telefono": "2215551234",
     "enlace": "https://example.com"
-  },
-  "titulo": "Muy buena atencion - Prueba manual",
-  "descripcion": "Lleve a mi perro y me explicaron con paciencia los cuidados. Esta es una recomendacion de prueba."
+  }
 }
 ```
 
-**Esperado:** `201 Created`. Crea el prestador y la recomendación juntos.
+Dirección, teléfono y enlace son opcionales. El enlace debe ser HTTP/HTTPS.
+Esperado: `201 Created`. Prestador y recomendación se guardan juntos. La recomendación **ya es válida sin aspectos**.
 
-Guardá:
+Guardar:
+- `id` → RECOMENDACION_ID.
+- `prestador.id` → PRESTADOR_ID.
 
-- `id` de la respuesta → **RECOMENDACION_ID**.
-- `prestador.id` → **PRESTADOR_ID**.
-- `mascoteroId` → autor, obtenido por la API desde la sesión.
+La respuesta incluye `aspectos: []` y `prestador.totalRecomendaciones: 1`.
+No enviar `titulo` ni `descripcion`: esos campos antiguos devuelven `400`.
 
-No enviar UsuarioId ni MascoteroId en el JSON: el autor se determina por el token.
+### b) Recomendar un prestador existente
 
-### b) Crear recomendación de un prestador existente
-
-**Método:** POST  
-**Token:** **Sí, accessToken en Bearer Token.**
-
-```text
-http://localhost:5080/api/recomendaciones
-```
+**POST** `http://localhost:5080/api/recomendaciones`
 
 ```json
 {
-  "prestadorServicioId": "REEMPLAZAR_CON_PRESTADOR_ID",
-  "titulo": "Otra experiencia en el mismo lugar",
-  "descripcion": "Volvi a consultar y la atencion fue muy buena. Esta es otra experiencia de prueba."
+  "prestadorServicioId": "REEMPLAZAR_CON_PRESTADOR_ID"
 }
 ```
 
-**Esperado:** `201 Created`, con otro ID de recomendación pero el mismo `prestador.id`.
+- Si ese mascotero aún no recomienda la ficha: `201`.
+- Si ya la recomienda: `200`, devuelve la misma recomendación y conserva sus aspectos.
+- Nunca suma dos votos del mismo mascotero para el mismo PRESTADOR_ID.
+- Enviar solo `prestadorServicioId` o `nuevoPrestador`; ambos o ninguno → `400`.
 
-**Enviar solo una opción:** `prestadorServicioId` o `nuevoPrestador`. Enviar ambos, o ninguno, devuelve 400. Crear un prestador con nombre parecido está permitido; no se bloquea por duplicado.
+Crear otra ficha con otro ID y nombre similar sigue permitido.
 
-### c) Listar recomendaciones
+### c) Consultar mis recomendaciones
 
-**Método:** GET  
-**Token:** No.  
-**JSON:** No lleva.
-
-```text
-http://localhost:5080/api/recomendaciones?pagina=1&tamanoPagina=20
-```
-
-**Esperado:** `200 OK`, resultado paginado con recomendaciones más recientes primero.
-
-### d) Buscar por texto, rubro y localidad
-
-**Método:** GET  
-**Token:** No.  
-**JSON:** No lleva.
+**GET**, sin body:
 
 ```text
-http://localhost:5080/api/recomendaciones?busqueda=Tilos&rubroId=10000000-0000-0000-0000-000000000001&localidadId=72d8db28-0357-4141-a29a-5596d92ecf4f&pagina=1&tamanoPagina=20
+http://localhost:5080/api/recomendaciones/mias?pagina=1&tamanoPagina=20
+http://localhost:5080/api/recomendaciones/mias?prestadorServicioId=PRESTADOR_ID
 ```
 
-**Esperado:** `200 OK`, recomendaciones que cumplan todos los filtros enviados.
+Esperado: `200`, página de recomendaciones del mascotero identificado por el JWT.
+La segunda consulta devuelve cero o una, y permite mostrar “Ya lo recomendás”.
+No se puede elegir otro autor mediante `mascoteroId`.
 
-También podés filtrar por provincia:
+La búsqueda pública se realiza con `GET /api/prestadores`; el antiguo `GET /api/recomendaciones` ya no se usa.
 
-```text
-http://localhost:5080/api/recomendaciones?provinciaId=17e0fcfd-bdf2-4b6a-987d-8c4b3192d3f6&pagina=1&tamanoPagina=20
-```
+### d) Consultar mi recomendación por ID
 
-O por autor, reemplazando **MASCOTERO_ID** por `usuario.mascotero.id` del registro/login:
+**GET** `http://localhost:5080/api/recomendaciones/RECOMENDACION_ID`
 
-```text
-http://localhost:5080/api/recomendaciones?mascoteroId=MASCOTERO_ID&pagina=1&tamanoPagina=20
-```
+**Body:** ninguno. Esperado: `200`, recomendación con prestador y aspectos seleccionados.
+Otro autor → `403`; inexistente → `404`; sin JWT → `401`.
+La ficha pública sigue disponible en `GET /api/prestadores/PRESTADOR_ID`.
 
-Estas consultas siguen siendo públicas. Filtrar por autor no exige su token.
+### e) Guardar o modificar aspectos
 
-### e) Detalle de una recomendación
-
-**Método:** GET  
-**Token:** No.  
-**JSON:** No lleva.
-
-```text
-http://localhost:5080/api/recomendaciones/RECOMENDACION_ID
-```
-
-Reemplazá **RECOMENDACION_ID** por el ID de la recomendación, no por el del prestador.
-
-**Esperado:** `200 OK`, experiencia, autor y ficha del prestador. Si no existe: 404.
-
-### f) Editar mi recomendación
-
-**Método:** PUT  
-**Token:** **Sí, accessToken del autor.**
-
-```text
-http://localhost:5080/api/recomendaciones/RECOMENDACION_ID
-```
+**PUT** `http://localhost:5080/api/recomendaciones/RECOMENDACION_ID/aspectos`
 
 ```json
 {
-  "titulo": "Actualizo mi experiencia - Prueba manual",
-  "descripcion": "La atencion fue buena y agrego mas detalles de mi visita. Este texto reemplaza la descripcion anterior."
+  "aspectoIds": [
+    "20000000-0000-0000-0000-000000000001",
+    "20000000-0000-0000-0000-000000000002"
+  ]
 }
 ```
 
-**Esperado:** `200 OK`, recomendación actualizada y `fechaActualizacion` informada.
+Esperado: `200`, recomendación actualizada.
+La lista **reemplaza** la selección anterior; IDs repetidos cuentan una sola vez.
+IDs inexistentes o inactivos no seleccionados previamente → `400`.
+Un aspecto desactivado ya elegido puede conservarse o quitarse.
+Otro autor → `403`; cambios simultáneos en conflicto → `409`, volver a consultar.
 
-Solo cambia título y descripción. No modifica el prestador compartido ni el autor.
-
-- Sin JWT: 401.
-- Con JWT de otro mascotero: 403.
-- Recomendación inexistente: 404.
-- Si otra operación la modificó durante la actualización, puede devolver 409: volver a consultar.
-
-### g) Eliminar mi recomendación
-
-**Método:** DELETE  
-**Token:** **Sí, accessToken del autor.**  
-**JSON:** No lleva.
-
-```text
-http://localhost:5080/api/recomendaciones/RECOMENDACION_ID
-```
-
-**Esperado:** `204 No Content`, sin cuerpo.
-
-Probar únicamente con el ID de tu recomendación de ejemplo. Después, consultar su detalle devuelve 404. El prestador permanece en el catálogo y las recomendaciones de otros no se eliminan.
-
-### h) Probar permisos con otro usuario
-
-Primero registrar una segunda cuenta en `POST http://localhost:5080/api/auth/register`, sin token:
+Para quitar todos los aspectos y **conservar el voto**:
 
 ```json
 {
-  "nombre": "Bruno",
-  "apellido": "Gomez",
-  "email": "bruno.prueba@example.invalid",
-  "password": "PruebaLocal2026!",
-  "passwordConfirm": "PruebaLocal2026!",
-  "telefono": null,
-  "localidadId": "72d8db28-0357-4141-a29a-5596d92ecf4f"
+  "aspectoIds": []
 }
 ```
 
-**Esperado:** 201. Si ya existe, iniciar sesión con ese email y contraseña usando 1.b.
+No enviar `null`. El antiguo PUT con título y descripción no se usa.
 
-Con el accessToken de Bruno:
+### f) Retirar mi recomendación
 
-1. Consultar una recomendación de Ana: GET de 4.e → **200**, es pública.
-2. Intentar editarla: PUT de 4.f con su JSON → **403**.
-3. Intentar eliminarla: DELETE de 4.g → **403**.
-4. Crear otra recomendación para el mismo prestador: POST de 4.b → **201**, pertenece a Bruno.
+**DELETE** `http://localhost:5080/api/recomendaciones/RECOMENDACION_ID`
 
-Hacé esta prueba antes de eliminar la recomendación de Ana. Para editar o eliminar después, volvé a seleccionar el token del autor correspondiente.
+**Body:** ninguno. Esperado: `204 No Content`.
+Elimina esa recomendación y sus aspectos. Recalcula los totales; no elimina el prestador ni votos ajenos.
+
+### g) Prueba de conteos y permisos
+
+1. Con Ana, crear un prestador (4.a): total 1, sin aspectos.
+2. Repetir 4.b con Ana: `200`, mismo ID, total sigue en 1.
+3. Guardar Buena atención y Responsabilidad (4.e).
+4. Registrar/iniciar sesión con otra cuenta (Bruno); guardar su accessToken.
+5. Con Bruno, consultar o editar la recomendación de Ana → `403`; eliminarla → `403`.
+6. Con Bruno, recomendar el mismo PRESTADOR_ID (4.b) → `201`, total 2 aunque Bruno no seleccione aspectos.
+7. Consultar la ficha pública (3.c): total 2; Buena atención 1 y Responsabilidad 1.
+8. Bruno selecciona Buena atención: ese aspecto sube a 2.
+9. Ana envía `aspectoIds: []`: total de personas sigue en 2; Buena atención baja a 1.
+10. Retirar únicamente los votos de prueba con el token de cada autor (4.f).
 
 ## 5 - PublicacionesController
 

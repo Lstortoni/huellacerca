@@ -46,6 +46,19 @@ void main() {
             return response([
               {'id': 'r1', 'nombre': 'Veterinaria'},
             ]);
+          case '/api/prestadores/prestador-1/recomendadores':
+            expect(r.url.queryParameters, {
+              'pagina': '2',
+              'tamanoPagina': '20',
+            });
+            return response({
+              'items': [
+                {'nombre': 'Leo'},
+              ],
+              'total': 21,
+              'pagina': 2,
+              'tamanoPagina': 20,
+            });
           case '/api/prestadores/similares':
             expect(r.url.queryParameters, {
               'nombre': 'Los Tilos',
@@ -53,16 +66,16 @@ void main() {
               'localidadId': 'l1',
             });
             return response([prestadorJson()]);
-          case '/api/recomendaciones':
+          case '/api/prestadores':
             expect(r.url.queryParameters['rubroId'], 'r1');
             return response({
-              'items': [recomendacionJson()],
+              'items': [prestadorJson()],
               'total': 1,
               'pagina': 1,
               'tamanoPagina': 20,
             });
           default:
-            return response(recomendacionJson());
+            return response(prestadorJson());
         }
       }),
     );
@@ -82,6 +95,13 @@ void main() {
     expect((await publicaciones.detalle('publicacion-1')).zona, 'Plaza');
     expect((await recomendaciones.rubros()).single.nombre, 'Veterinaria');
     expect(
+      (await recomendaciones.recomendadores(
+        'prestador-1',
+        pagina: 2,
+      )).items.single.nombre,
+      'Leo',
+    );
+    expect(
       (await recomendaciones.similares(
         nombre: 'Los Tilos',
         rubroId: 'r1',
@@ -93,11 +113,11 @@ void main() {
       (await recomendaciones.buscar(filtros: {'rubroId': 'r1'}))
           .items
           .single
-          .autor,
-      'Ana',
+          .nombre,
+      'Veterinaria del barrio',
     );
     expect(
-      (await recomendaciones.detalle('recomendacion-1')).prestador.nombre,
+      (await recomendaciones.detalle('prestador-1')).nombre,
       'Veterinaria del barrio',
     );
   });
@@ -168,16 +188,10 @@ void main() {
       expect((await service.resolver('publicacion-1')).estado, 2);
       final recomendaciones = RecomendacionServiceApi(api, auth);
       await recomendaciones.crear(
-        const CrearRecomendacionRequest(
-          titulo: 'Buena atención',
-          descripcion: 'Muy buena atención',
-          prestadorServicioId: 'prestador-1',
-        ),
+        const CrearRecomendacionRequest(prestadorServicioId: 'prestador-1'),
       );
       await recomendaciones.crear(
         const CrearRecomendacionRequest(
-          titulo: 'Buena atención',
-          descripcion: 'Muy buena atención',
           nuevoPrestador: NuevoPrestadorRequest(
             nombre: 'Otro',
             rubroId: 'r1',

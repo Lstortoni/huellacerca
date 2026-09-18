@@ -14,6 +14,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Rubro> Rubros => Set<Rubro>();
     public DbSet<PrestadorServicio> PrestadoresServicio => Set<PrestadorServicio>();
     public DbSet<Recomendacion> Recomendaciones => Set<Recomendacion>();
+    public DbSet<AspectoRecomendacion> AspectosRecomendacion => Set<AspectoRecomendacion>();
+    public DbSet<RecomendacionAspecto> RecomendacionesAspectos => Set<RecomendacionAspecto>();
     public DbSet<PublicacionMascota> PublicacionesMascotas => Set<PublicacionMascota>();
     public DbSet<FotoPublicacion> FotosPublicaciones => Set<FotoPublicacion>();
 

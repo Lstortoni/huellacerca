@@ -63,11 +63,10 @@ public sealed class RecomendacionConfiguration : IEntityTypeConfiguration<Recome
     public void Configure(EntityTypeBuilder<Recomendacion> b)
     {
         b.ToTable("recomendaciones"); b.HasKey(x => x.Id);
-        b.Property(x => x.Titulo).HasMaxLength(150).IsRequired(); b.Property(x => x.Descripcion).HasMaxLength(3000).IsRequired();
+        b.HasIndex(x => new { x.MascoteroId, x.PrestadorServicioId }).IsUnique();
         b.Property(x => x.FechaActualizacion).IsConcurrencyToken();
         b.HasIndex(x => x.FechaCreacion);
         b.HasOne(x => x.Mascotero).WithMany(x => x.Recomendaciones).HasForeignKey(x => x.MascoteroId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne(x => x.PrestadorServicio).WithMany(x => x.Recomendaciones).HasForeignKey(x => x.PrestadorServicioId).OnDelete(DeleteBehavior.Restrict);
     }
 }
-

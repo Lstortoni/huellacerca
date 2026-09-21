@@ -13,6 +13,12 @@ public sealed class PublicacionMascotaConfiguration : IEntityTypeConfiguration<P
             t.HasCheckConstraint("CK_publicaciones_mascotas_tipo", "\"TipoPublicacion\" IN (1, 2, 3, 4)");
             t.HasCheckConstraint("CK_publicaciones_mascotas_mascota", "\"TipoMascota\" IN (1, 2, 3)");
             t.HasCheckConstraint("CK_publicaciones_mascotas_estado", "\"Estado\" IN (1, 2)");
+            t.HasCheckConstraint("CK_publicaciones_tamano", "\"Tamano\" IS NULL OR \"Tamano\" IN (1, 2, 3)");
+            t.HasCheckConstraint("CK_publicaciones_raza", "\"Raza\" IS NULL OR \"Raza\" IN (1, 2)");
+            t.HasCheckConstraint("CK_publicaciones_pelaje", "\"Pelaje\" IS NULL OR \"Pelaje\" IN (1, 2, 3)");
+            t.HasCheckConstraint("CK_publicaciones_color", "\"ColorPredominante\" IS NULL OR \"ColorPredominante\" IN (1, 2, 3, 4, 5, 6, 7)");
+            t.HasCheckConstraint("CK_publicaciones_ojos", "\"ColorOjos\" IS NULL OR \"ColorOjos\" IN (1, 2, 3)");
+            t.HasCheckConstraint("CK_publicaciones_caracteristicas_otro", "\"TipoMascota\" <> 3 OR (\"Raza\" IS NULL AND \"Pelaje\" IS NULL AND \"ColorOjos\" IS NULL)");
         });
         b.HasKey(x => x.Id);
         b.Property(x => x.NombreMascota).HasMaxLength(100);

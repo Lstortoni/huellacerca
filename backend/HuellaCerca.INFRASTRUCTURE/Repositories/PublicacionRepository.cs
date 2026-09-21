@@ -22,6 +22,12 @@ public sealed class PublicacionRepository(AppDbContext db) : IPublicacionReposit
     public async Task<(IReadOnlyList<PublicacionMascota> Items, int Total)> BuscarAsync(PublicacionesQuery q, CancellationToken ct)
     {
         var query = Publicaciones.AsNoTracking();
+        // Los filtros son exactos y se combinan; null en el aviso no implica coincidencia.
+        if (q.Tamano.HasValue) query = query.Where(x => (int?)x.Tamano == q.Tamano);
+        if (q.Raza.HasValue) query = query.Where(x => (int?)x.Raza == q.Raza);
+        if (q.Pelaje.HasValue) query = query.Where(x => (int?)x.Pelaje == q.Pelaje);
+        if (q.ColorPredominante.HasValue) query = query.Where(x => (int?)x.ColorPredominante == q.ColorPredominante);
+        if (q.ColorOjos.HasValue) query = query.Where(x => (int?)x.ColorOjos == q.ColorOjos);
         if (q.TipoPublicacion.HasValue) query = query.Where(x => (int)x.TipoPublicacion == q.TipoPublicacion);
         if (q.TipoMascota.HasValue) query = query.Where(x => (int)x.TipoMascota == q.TipoMascota);
         if (q.Estado.HasValue) query = query.Where(x => (int)x.Estado == q.Estado);
@@ -58,5 +64,31 @@ public sealed class PublicacionRepository(AppDbContext db) : IPublicacionReposit
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateConcurrencyException)
         { throw new AppException(409, "La publicación cambió o fue eliminada. Volvé a consultar."); }
+    }
+
+    public async Task<(IReadOnlyList<PublicacionMascota> Items, int Total)> CoincidenciasAsync(
+        PublicacionMascota origen, DateOnly desde, DateOnly hasta, CoincidenciasQuery q, CancellationToken ct)
+    {
+        var tipoOpuesto = origen.TipoPublicacion == TipoPublicacionMascota.Perdida
+            ? TipoPublicacionMascota.Encontrada : TipoPublicacionMascota.Perdida;
+        // Puntuar en SQL antes de paginar: nunca traer todos los candidatos a memoria.
+        var candidatos = db.PublicacionesMascotas.AsNoTracking()
+            .Where(x => x.Id != origen.Id && x.Estado == EstadoPublicacionMascota.Activa
+                && x.TipoPublicacion == tipoOpuesto && x.TipoMascota == origen.TipoMascota
+                && x.LocalidadId == origen.LocalidadId && x.FechaSuceso >= desde && x.FechaSuceso <= hasta)
+            .Select(x => new {
+                x.Id, x.FechaCreacion,
+                Puntos = (origen.Tamano.HasValue && x.Tamano == origen.Tamano ? 1 : 0)
+                    + (origen.Raza.HasValue && x.Raza == origen.Raza ? 1 : 0)
+                    + (origen.Pelaje.HasValue && x.Pelaje == origen.Pelaje ? 1 : 0)
+                    + (origen.ColorPredominante.HasValue && x.ColorPredominante == origen.ColorPredominante ? 1 : 0)
+                    + (origen.ColorOjos.HasValue && x.ColorOjos == origen.ColorOjos ? 1 : 0)
+            }).Where(x => x.Puntos > 0);
+        var total = await candidatos.CountAsync(ct);
+        var ids = await candidatos.OrderByDescending(x => x.Puntos).ThenByDescending(x => x.FechaCreacion)
+            .ThenBy(x => x.Id).Skip((q.Pagina - 1) * q.TamanoPagina).Take(q.TamanoPagina)
+            .Select(x => x.Id).ToListAsync(ct);
+        var items = await Publicaciones.AsNoTracking().Where(x => ids.Contains(x.Id)).ToListAsync(ct);
+        return (items.OrderBy(x => ids.IndexOf(x.Id)).ToList(), total);
     }
 }

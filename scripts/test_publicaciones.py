@@ -1,4 +1,4 @@
-"""Pruebas HTTP de desarrollo. Deja dos cuentas y cuatro avisos resueltos hc-pets-test-*.
+"""Pruebas HTTP de desarrollo. Deja dos cuentas y avisos resueltos hc-pets-test-*.
 
 No borra datos existentes. Ejecutar con el servicio huellacerca_tests de Compose.
 """
@@ -51,6 +51,19 @@ today = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).d
 request = dict(tipoPublicacion=1, tipoMascota=1, nombreMascota=None,
     descripcion="Perro marrón con collar azul, visto junto a la plaza.", fechaSuceso=today.isoformat(),
     localidadId=locality, zona=TAG + " Plaza", informacionContacto="Contacto de prueba")
+fields = dict(tamano=2, raza=2, pelaje=1, colorPredominante=3, colorOjos=1)
+for pet in (1, 2):
+    options = call("GET", f"/api/publicaciones/caracteristicas?tipoMascota={pet}")
+    assert {x["campo"] for x in options} == set(fields)
+    assert all(fields[x["campo"]] in [o["id"] for o in x["opciones"]] for x in options)
+assert {x["campo"] for x in call("GET", "/api/publicaciones/caracteristicas?tipoMascota=3")} == {"tamano", "colorPredominante"}
+for invalid in (0, 4, -1):
+    call("GET", f"/api/publicaciones/caracteristicas?tipoMascota={invalid}", expected=400)
+for field, maximum in dict(tamano=3, raza=2, pelaje=3, colorPredominante=7, colorOjos=3).items():
+    for invalid in (0, -1, maximum + 1, "invalido"):
+        call("POST", "/api/publicaciones", {**request, field: invalid}, token, 400)
+for field in ("raza", "pelaje", "colorOjos"):
+    call("POST", "/api/publicaciones", {**request, "tipoMascota": 3, field: 1}, token, 400)
 call("POST", "/api/publicaciones", request, expected=401)
 for bad in (
     {"tipoPublicacion": 0}, {"tipoPublicacion": 5}, {"tipoMascota": 4},
@@ -68,9 +81,27 @@ assert first["mascoteroId"] == a["usuario"]["mascotero"]["id"]
 assert first["estado"] == 1 and first["fotografias"] == [] and first["nombreMascota"] is None
 assert first["provinciaId"] == province and first["localidadId"] == locality
 assert first["fechaSuceso"] == today.isoformat()
-second = call("POST", "/api/publicaciones", {**request, "tipoPublicacion": 2, "tipoMascota": 2,
+assert all(first[field] is None for field in fields)
+second = call("POST", "/api/publicaciones", {**request, **fields, "tipoPublicacion": 2, "tipoMascota": 2,
     "nombreMascota": "  Michi  ", "fechaSuceso": (today - datetime.timedelta(days=1)).isoformat()}, token, 201)
 assert second["nombreMascota"] == "Michi"
+assert all(second[field] == value for field, value in fields.items())
+saved = call("GET", "/api/publicaciones/" + second["id"])
+assert all(saved[field] == value for field, value in fields.items())
+listed = search(tipoPublicacion=2)["items"][0]
+assert all(listed[field] == value for field, value in fields.items())
+for field, value in fields.items():
+    result = search(**{field: value})
+    assert result['total'] == 1 and result['items'][0]['id'] == second['id']
+    assert search(**{field: 1 if value != 1 else 2})['total'] == 0
+    call('GET', '/api/publicaciones?' + urllib.parse.urlencode({field: 0}), expected=400)
+    call('GET', '/api/publicaciones?' + urllib.parse.urlencode({field: 99}), expected=400)
+assert search(**fields)['total'] == 1
+assert search(**{**fields, 'tamano': 1})['total'] == 0
+assert search(**fields, tipoMascota=1)['total'] == 0
+assert search(**fields, tipoMascota=2, localidadId=locality)['total'] == 1
+assert search(**fields, tamanoPagina=1, pagina=2)['items'] == []
+call('GET', '/api/publicaciones?tipoMascota=3&raza=1', expected=400)
 detail = call("GET", "/api/publicaciones/" + first["id"])
 # PostgreSQL conserva microsegundos; .NET puede serializar una fracción adicional al crear.
 assert {k: v for k, v in detail.items() if k != "fechaCreacion"} == {
@@ -124,7 +155,14 @@ assert call("GET", "/api/publicaciones?" + urllib.parse.urlencode(dict(tipoPubli
 assert call("GET", "/api/publicaciones/" + wanted["id"])["fechaCreacion"]
 call("PATCH", "/api/publicaciones/" + wanted["id"] + "/resolver", token=b["accessToken"], expected=403)
 assert call("PATCH", "/api/publicaciones/" + wanted["id"] + "/resolver", token=token)["estado"] == 2
+for extra in ({field: None for field in fields}, {"tipoMascota": 3, "tamano": 1, "colorPredominante": 7}, fields):
+    item = call("POST", "/api/publicaciones", {**request, **extra}, token, 201)
+    for field in fields:
+        assert item[field] == extra.get(field)
+    resolved = call("PATCH", "/api/publicaciones/" + item["id"] + "/resolver", token=token)
+    assert all(resolved[field] == item[field] for field in fields)
 for session in sessions:
     call("POST", "/api/auth/logout", {"refreshToken": session["refreshToken"]}, expected=204)
 print("OK: creación sin fotos, validaciones, autor desde JWT, detalle público, filtros, paginación y resolución con permisos.")
+print("OK: características opcionales, persistencia, catálogo por especie y rechazo de valores incompatibles.")
 print("Datos de prueba identificados por:", TAG)

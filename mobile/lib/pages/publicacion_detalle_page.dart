@@ -5,6 +5,8 @@ import '../services/contracts/auth_service.dart';
 import '../services/contracts/publicacion_service.dart';
 import '../widgets/barra_superior.dart';
 import '../widgets/contenido_formulario.dart';
+import '../widgets/caracteristicas_publicacion.dart';
+import '../widgets/coincidencias_publicacion.dart';
 
 class PublicacionDetallePage extends StatefulWidget {
   const PublicacionDetallePage({
@@ -56,7 +58,11 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
     });
     try {
       final result = await widget.service.resolver(widget.id);
-      if (mounted) setState(() => _future = Future.value(result));
+      if (mounted) {
+        setState(() {
+          _future = Future.value(result);
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = mensajeError(e));
     } finally {
@@ -82,9 +88,9 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
               children: [
                 Text(mensajeError(snapshot.error!)),
                 TextButton(
-                  onPressed: () => setState(
-                    () => _future = widget.service.detalle(widget.id),
-                  ),
+                  onPressed: () => setState(() {
+                    _future = widget.service.detalle(widget.id);
+                  }),
                   child: const Text('Reintentar'),
                 ),
               ],
@@ -101,6 +107,12 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
               ),
               const SizedBox(height: 16),
               Text(p.descripcion),
+              if (p.caracteristicas.isNotEmpty)
+                CaracteristicasPublicacion(
+                  key: ValueKey('${p.id}:${p.tipoMascota}'),
+                  publicacion: p,
+                  service: widget.service,
+                ),
               const SizedBox(height: 16),
               Text('${p.etiquetaFecha}: ${fechaVisible(p.fechaReferencia)}'),
               Text('${p.localidad}, ${p.provincia}'),
@@ -122,12 +134,15 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
                 builder: (_, _) =>
                     p.estado == 1 &&
                         widget.auth.usuario?.mascotero.id == p.mascoteroId
-                    ? FilledButton(
+                    ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [FilledButton(
                         onPressed: _ocupado ? null : _resolver,
                         child: Text(
                           _ocupado ? 'Guardando…' : 'Marcar como resuelta',
                         ),
-                      )
+                      ),
+                      if (p.tipoPublicacion <= 2)
+                        CoincidenciasPublicacion(key: ValueKey(p.id), publicacion: p, auth: widget.auth, service: widget.service),
+                      ])
                     : const SizedBox.shrink(),
               ),
             ],

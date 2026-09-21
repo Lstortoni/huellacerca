@@ -1,5 +1,13 @@
 # Huella Cerca — app Flutter
 
+## Características al publicar
+
+`PublicarMascotaPage` obtiene opciones de `PublicacionService.caracteristicas(tipoMascota)` al abrir y cambiar de especie. El servicio consume GET `/api/publicaciones/caracteristicas`; los DTO están en `models/publicacion_dto.dart`. Los textos y valores de los selectores proceden de la API.
+
+Los cuatro tipos de aviso permiten características opcionales. Para Busco adoptar son preferencias y no se pide nombre ni fecha del suceso. Sin indicar omite el campo del JSON; el cero utilizado por el selector nunca se envía. Al cambiar especie o tipo de aviso se limpian las selecciones. Un error del catálogo permite reintentar o publicar sin características. `CrearPublicacionRequest` envía los valores elegidos y `PublicacionDto` lee los campos opcionales sin romper avisos anteriores.
+
+El detalle muestra solo las características informadas, usando las etiquetas de la API. En Busco adoptar se titulan Características que busca. La búsqueda y Mis publicaciones permiten filtros opcionales por características al seleccionar especie, con Cualquiera y Quitar filtros de características. Cambiar especie limpia las selecciones. Los filtros son exactos, combinados con AND, y excluyen avisos sin ese dato; sin filtros se incluyen también los avisos anteriores. Un error del catálogo permite reintentar sin ocultar el resto del detalle. La instalación en Android la realiza el usuario.
+
 Inicio con tarjetas públicas de búsqueda y acciones de participación según la sesión. No consulta `/health` ni provincias para mostrarse. El icono de cuenta abre ingreso y registro; con sesión muestra perfil y cierre de sesión. El registro conserva la selección de provincia/localidad y crea la cuenta mediante la API.
 
 ## Dónde se programa

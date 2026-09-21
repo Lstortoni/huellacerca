@@ -6,7 +6,7 @@ const tiposPublicacion = {
 };
 // En búsqueda hablamos de los avisos de otras personas, no de la acción del lector.
 const tiposPublicacionBusqueda = {
-  1: 'Mascotas que su familia busca',
+  1: 'Mascotas extraviadas',
   2: 'Mascotas encontradas',
   3: 'Mascotas en adopción',
   4: 'Personas que quieren adoptar',
@@ -26,6 +26,35 @@ const etiquetasPublicacion = {
 const tiposMascota = {1: 'Perro', 2: 'Gato', 3: 'Otro'};
 const estadosPublicacion = {1: 'Activa', 2: 'Resuelta'};
 
+class CoincidenciaPublicacionDto {
+  CoincidenciaPublicacionDto.fromJson(Map<String, dynamic> j)
+    : publicacion = PublicacionDto.fromJson(j['publicacion'] as Map<String, dynamic>),
+      coincideEn = (j['coincideEn'] as List).cast<String>();
+  final PublicacionDto publicacion;
+  final List<String> coincideEn;
+}
+
+class OpcionCaracteristicaDto {
+  OpcionCaracteristicaDto.fromJson(Map<String, dynamic> j)
+    : id = j['id'] as int,
+      nombre = j['nombre'] as String;
+  final int id;
+  final String nombre;
+}
+
+class CaracteristicaMascotaDto {
+  CaracteristicaMascotaDto.fromJson(Map<String, dynamic> j)
+    : campo = j['campo'] as String,
+      nombre = j['nombre'] as String,
+      opciones = (j['opciones'] as List)
+          .map(
+            (o) => OpcionCaracteristicaDto.fromJson(o as Map<String, dynamic>),
+          )
+          .toList();
+  final String campo, nombre;
+  final List<OpcionCaracteristicaDto> opciones;
+}
+
 class PublicacionDto {
   PublicacionDto.fromJson(Map<String, dynamic> j)
     : id = j['id'] as String,
@@ -33,6 +62,11 @@ class PublicacionDto {
       autor = j['autor'] as String,
       tipoPublicacion = j['tipoPublicacion'] as int,
       tipoMascota = j['tipoMascota'] as int,
+      tamano = j['tamano'] as int?,
+      raza = j['raza'] as int?,
+      pelaje = j['pelaje'] as int?,
+      colorPredominante = j['colorPredominante'] as int?,
+      colorOjos = j['colorOjos'] as int?,
       nombreMascota = j['nombreMascota'] as String?,
       descripcion = j['descripcion'] as String,
       fechaSuceso = j['fechaSuceso'] == null
@@ -54,8 +88,16 @@ class PublicacionDto {
       informacionContacto;
   final String? nombreMascota;
   final int tipoPublicacion, tipoMascota, estado;
+  final int? tamano, raza, pelaje, colorPredominante, colorOjos;
   final DateTime? fechaSuceso;
   final DateTime fechaCreacion;
+  Map<String, int> get caracteristicas => {
+    'tamano': ?tamano,
+    'raza': ?raza,
+    'pelaje': ?pelaje,
+    'colorPredominante': ?colorPredominante,
+    'colorOjos': ?colorOjos,
+  };
   DateTime get fechaReferencia => tipoPublicacion >= 3 || fechaSuceso == null
       ? fechaCreacion.toUtc().subtract(const Duration(hours: 3))
       : fechaSuceso!;
@@ -79,8 +121,14 @@ class CrearPublicacionRequest {
     required this.localidadId,
     required this.zona,
     required this.informacionContacto,
+    this.tamano,
+    this.raza,
+    this.pelaje,
+    this.colorPredominante,
+    this.colorOjos,
   });
   final int tipoPublicacion, tipoMascota;
+  final int? tamano, raza, pelaje, colorPredominante, colorOjos;
   final String? nombreMascota;
   final String descripcion, localidadId, zona, informacionContacto;
   final DateTime? fechaSuceso;
@@ -94,5 +142,10 @@ class CrearPublicacionRequest {
     'localidadId': localidadId,
     'zona': zona,
     'informacionContacto': informacionContacto,
+    if (tamano != null) 'tamano': tamano,
+    if (raza != null) 'raza': raza,
+    if (pelaje != null) 'pelaje': pelaje,
+    if (colorPredominante != null) 'colorPredominante': colorPredominante,
+    if (colorOjos != null) 'colorOjos': colorOjos,
   };
 }

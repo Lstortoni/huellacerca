@@ -42,6 +42,19 @@ Map<String, dynamic> recomendacionJson() => {
 };
 
 class PublicacionServiceMock implements PublicacionService {
+  @override
+  Future<PaginaDto<CoincidenciaPublicacionDto>> coincidencias(String id, {int pagina = 1, int tamanoPagina = 10}) async => PaginaDto([], 0, pagina, tamanoPagina);
+  bool falloCaracteristicas = false;
+  @override
+  Future<List<CaracteristicaMascotaDto>> caracteristicas(
+    int tipoMascota,
+  ) async {
+    if (falloCaracteristicas) throw Exception('Sin conexión');
+    return caracteristicasJson(tipoMascota)
+        .map(CaracteristicaMascotaDto.fromJson)
+        .toList();
+  }
+
   int estado = 1, resoluciones = 0, consultas = 0;
   String autorId = 'mascotero-1';
   CrearPublicacionRequest? creada;
@@ -73,6 +86,54 @@ class PublicacionServiceMock implements PublicacionService {
     return detalle(id);
   }
 }
+
+List<Map<String, dynamic>> caracteristicasJson(int tipoMascota) => [
+  {
+    'campo': 'tamano',
+    'nombre': 'Tamaño',
+    'opciones': [
+      {'id': 1, 'nombre': 'Chico'},
+      {'id': 2, 'nombre': 'Mediano'},
+      {'id': 3, 'nombre': 'Grande'},
+    ],
+  },
+  if (tipoMascota != 3) ...[
+    {
+      'campo': 'raza',
+      'nombre': 'Raza',
+      'opciones': [
+        {'id': 1, 'nombre': 'De raza'},
+        {'id': 2, 'nombre': 'Mestizo'},
+      ],
+    },
+    {
+      'campo': 'pelaje',
+      'nombre': 'Pelaje',
+      'opciones': [
+        {'id': 1, 'nombre': 'Corto'},
+        {'id': 2, 'nombre': 'Medio'},
+        {'id': 3, 'nombre': 'Largo'},
+      ],
+    },
+    {
+      'campo': 'colorOjos',
+      'nombre': 'Color de ojos',
+      'opciones': [
+        {'id': 1, 'nombre': 'Oscuros'},
+        {'id': 2, 'nombre': 'Claros'},
+        {'id': 3, 'nombre': 'Diferentes'},
+      ],
+    },
+  ],
+  {
+    'campo': 'colorPredominante',
+    'nombre': 'Color predominante',
+    'opciones': [
+      {'id': 1, 'nombre': 'Negro'},
+      {'id': 7, 'nombre': 'Mixto/Otro'},
+    ],
+  },
+];
 
 class RecomendacionServiceMock implements RecomendacionService {
   CrearRecomendacionRequest? creada;

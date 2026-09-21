@@ -5,6 +5,8 @@ namespace HuellaCerca.INTERFACES.Services;
 
 public interface IPublicacionService
 {
+    IReadOnlyList<CaracteristicaMascotaDto> Caracteristicas(int tipoMascota);
+    Task<PaginaDto<CoincidenciaPublicacionDto>> CoincidenciasAsync(Guid id, Guid mascoteroId, CoincidenciasQuery query, CancellationToken ct);
     Task<PublicacionDto> CrearAsync(Guid mascoteroId, CrearPublicacionRequest request, CancellationToken ct);
     Task<PublicacionDto> PorIdAsync(Guid id, CancellationToken ct);
     Task<PaginaDto<PublicacionDto>> BuscarAsync(PublicacionesQuery query, CancellationToken ct);

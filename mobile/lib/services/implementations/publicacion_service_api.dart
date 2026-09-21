@@ -9,6 +9,21 @@ class PublicacionServiceApi implements PublicacionService {
   final ApiClient _api;
   final AuthService _auth;
   @override
+  Future<PaginaDto<CoincidenciaPublicacionDto>> coincidencias(String id, {int pagina = 1, int tamanoPagina = 10}) async =>
+    PaginaDto.fromJson(await _auth.getProtegido('api/publicaciones/$id/coincidencias?pagina=$pagina&tamanoPagina=$tamanoPagina') as Map<String, dynamic>, CoincidenciaPublicacionDto.fromJson);
+  @override
+  Future<List<CaracteristicaMascotaDto>> caracteristicas(
+    int tipoMascota,
+  ) async =>
+      (await _api.getJson(
+            'api/publicaciones/caracteristicas',
+            query: {'tipoMascota': '$tipoMascota'},
+          ) as List)
+          .map(
+            (j) => CaracteristicaMascotaDto.fromJson(j as Map<String, dynamic>),
+          )
+          .toList();
+  @override
   Future<PaginaDto<PublicacionDto>> buscar({
     Map<String, String> filtros = const {},
     int pagina = 1,

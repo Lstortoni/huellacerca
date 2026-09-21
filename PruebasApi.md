@@ -494,6 +494,45 @@ Valores numéricos: `tipoPublicacion`: 1 Perdida, 2 Encontrada, 3 Doy en adopci�
 
 ### a) Crear una publicación sin fotos
 
+Los nuevos campos `tamano`, `raza`, `pelaje`, `colorPredominante` y `colorOjos` son opcionales. Omitirlos o enviar `null` significa **No sé / Sin indicar**. No usar `0`.
+
+Consultá primero las opciones (GET público, No Auth, sin body):
+
+```text
+http://localhost:5080/api/publicaciones/caracteristicas?tipoMascota=1
+```
+
+`tipoMascota`: 1 perro, 2 gato, 3 otro; por defecto 1. Responde una lista con `campo`, `nombre` y `opciones` (`id`, `nombre`). Para perros/gatos devuelve cinco campos; para Otro, solo tamaño y color predominante. Tipo inexistente devuelve 400.
+
+| Campo | Valores |
+|---|---|
+| tamano | 1 Chico, 2 Mediano, 3 Grande |
+| raza | 1 De raza, 2 Mestizo |
+| pelaje | 1 Corto, 2 Medio, 3 Largo |
+| colorPredominante | 1 Negro, 2 Blanco, 3 Marrón, 4 Gris, 5 Beige, 6 Naranja, 7 Mixto/Otro |
+| colorOjos | 1 Oscuros, 2 Claros, 3 Diferentes |
+
+Ejemplo completo con características: **POST** `http://localhost:5080/api/publicaciones`, **Bearer accessToken**, body raw JSON. Reemplazar LOCALIDAD_ID por un ID real:
+
+```json
+{
+  "tipoPublicacion": 1,
+  "tipoMascota": 1,
+  "descripcion": "Perro mediano de pelaje corto, marrón, con collar azul.",
+  "fechaSuceso": "2026-09-19",
+  "localidadId": "REEMPLAZAR_CON_LOCALIDAD_ID",
+  "zona": "Cerca de la plaza",
+  "informacionContacto": "2215551234",
+  "tamano": 2,
+  "raza": 2,
+  "pelaje": 1,
+  "colorPredominante": 3,
+  "colorOjos": null
+}
+```
+
+Esperado: 201. Detalle, listado y resolución devuelven también estos cinco campos. Probar sin ellos y con null: ambos válidos. Valores fuera del catálogo (por ejemplo `raza: 3`) devuelven 400. Con `tipoMascota: 3`, raza/pelaje/colorOjos deben omitirse o ser null; enviarlos devuelve 400. Flutter ya permite seleccionarlos en el formulario de los cuatro tipos de aviso. El detalle Flutter muestra sus etiquetas y la búsqueda permite filtrarlas.
+
 **POST** `http://localhost:5080/api/publicaciones`
 
 **Authorization:** Bearer Token, pegar el **accessToken** de login/registro (no el refreshToken).
@@ -535,6 +574,14 @@ Ejemplo de Busco adoptar, con JWT y un LOCALIDAD_ID válido:
 Para tipo 4, nombre y fecha no se utilizan; zona es opcional. El contacto sigue siendo obligatorio y público. Para tipos 1 y 2 se sigue exigiendo fecha no futura. Los filtros de fechas usan el día de publicación en Argentina para ambos tipos de adopción, y el día del suceso para perdidas/encontradas.
 
 ### b) Buscar publicaciones
+
+Filtros opcionales nuevos: `tamano`, `raza`, `pelaje`, `colorPredominante`, `colorOjos`, con los mismos IDs que en creación. GET público, sin JWT ni body:
+
+```text
+http://localhost:5080/api/publicaciones?tipoMascota=1&tamano=2&raza=2&estado=1&pagina=1&tamanoPagina=20
+```
+
+Devuelve perros medianos y mestizos activos. Los filtros se combinan entre sí y con ubicación, fechas y tipo de publicación. Un aviso con tamaño null no satisface `tamano=2`. Sin filtros de características, los avisos sin esos datos siguen incluidos. Para quitarlos, omitir el parámetro, no enviar cero. `raza=99` o `tipoMascota=3&raza=1` devuelven 400. Esto es búsqueda exacta, no detección de posibles coincidencias.
 
 **GET** `http://localhost:5080/api/publicaciones`
 

@@ -36,6 +36,24 @@ class _MascotasPageState extends State<MascotasPage> {
   String? _error;
   int _revision = 0;
   Map<String, String> _filtros = {'estado': '1'};
+  Future<List<CaracteristicaMascotaDto>>? _opciones;
+  final Map<String, int> _caracteristicas = {};
+  int _revisionCaracteristicas = 0;
+
+  void _cambiarMascota(int? tipo) {
+    _mascota = tipo;
+    _caracteristicas.clear();
+    _revisionCaracteristicas++;
+    _cargarOpciones();
+  }
+
+  void _cargarOpciones() {
+    _opciones = _mascota == null
+        ? null
+        : widget.service.caracteristicas(_mascota!);
+    _opciones?.ignore();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +80,7 @@ class _MascotasPageState extends State<MascotasPage> {
     setState(() {
       _error = null;
       _filtros = {
+        for (final c in _caracteristicas.entries) c.key: '${c.value}',
         if (_tipo != null) 'tipoPublicacion': '$_tipo',
         if (_mascota != null) 'tipoMascota': '$_mascota',
         if (_estado != null) 'estado': '$_estado',
@@ -138,12 +157,71 @@ class _MascotasPageState extends State<MascotasPage> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(explicacionesPublicacion[_tipo]!),
             ),
-          _selector(
-            'Tipo de mascota',
-            tiposMascota,
-            _mascota,
-            (v) => _mascota = v,
-          ),
+          _selector('Tipo de mascota', tiposMascota, _mascota, _cambiarMascota),
+          if (_mascota == null)
+            const Text(
+              'Elegí un tipo de mascota para filtrar por sus características.',
+            )
+          else
+            FutureBuilder<List<CaracteristicaMascotaDto>>(
+              future: _opciones,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const LinearProgressIndicator();
+                }
+                if (snapshot.hasError) {
+                  return TextButton(
+                    onPressed: () => setState(_cargarOpciones),
+                    child: const Text(
+                      'No pudimos cargar los filtros. Reintentar',
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    const Text(
+                      'Características (opcionales). Cada filtro busca el valor exacto; los avisos sin ese dato quedan fuera.',
+                    ),
+                    for (final campo in snapshot.data!)
+                      DropdownButtonFormField<int>(
+                        key: ValueKey(
+                          '$_revisionCaracteristicas:${campo.campo}',
+                        ),
+                        initialValue: _caracteristicas[campo.campo] ?? 0,
+                        isExpanded: true,
+                        decoration: InputDecoration(labelText: campo.nombre),
+                        items: [
+                          const DropdownMenuItem(
+                            value: 0,
+                            child: Text('Cualquiera'),
+                          ),
+                          ...campo.opciones.map(
+                            (o) => DropdownMenuItem(
+                              value: o.id,
+                              child: Text(o.nombre),
+                            ),
+                          ),
+                        ],
+                        onChanged: (v) => setState(() {
+                          if (v == null || v == 0) {
+                            _caracteristicas.remove(campo.campo);
+                          } else {
+                            _caracteristicas[campo.campo] = v;
+                          }
+                        }),
+                      ),
+                    if (_caracteristicas.isNotEmpty)
+                      TextButton(
+                        onPressed: () => setState(() {
+                          _caracteristicas.clear();
+                          _revisionCaracteristicas++;
+                        }),
+                        child: const Text('Quitar filtros de características'),
+                      ),
+                  ],
+                );
+              },
+            ),
           _selector('Estado', estadosPublicacion, _estado, (v) => _estado = v),
           CampoUbicacion(
             service: widget.ubicacion,

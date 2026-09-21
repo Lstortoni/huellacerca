@@ -35,9 +35,17 @@ Valores JSON numéricos: tipoPublicacion 1=Perdida, 2=Encontrada, 3=Adopcion (Do
 
 La migración 20260917230913_PublicacionesAdopcion, generada con EF en Docker, amplía la restricción de PostgreSQL para permitir el valor 3, conservando los anteriores. Reemplaza la versión manual pendiente y solo modifica esa restricción. Aplicar desde la raíz: `docker compose up -d --build huellacerca_api`. Compose reconstruye y ejecuta el servicio de migraciones antes de iniciar la API. Para revertir a la restricción anterior no pueden quedar filas de tipo 3.
 
-Pruebas: docker compose run --rm --no-deps huellacerca_tests python /tests/test_publicaciones.py. Crea dos cuentas y cuatro avisos de prueba identificados por hc-pets-test-*; al terminar deja los avisos resueltos, sin borrar datos existentes. Ejemplos manuales en PruebasApi.md.
+Pruebas: docker compose run --rm --no-deps huellacerca_tests python /tests/test_publicaciones.py. Crea dos cuentas y siete avisos de prueba identificados por hc-pets-test-*; al terminar deja los avisos resueltos, sin borrar datos existentes. Ejemplos manuales en PruebasApi.md.
 
 ## Próximo bloque
+
+### Características opcionales — backend
+
+La migración `20260920223958_CaracteristicasMascota` agrega cinco columnas enteras nullable a `publicaciones_mascotas`: Tamano, Raza, Pelaje, ColorPredominante y ColorOjos. Las publicaciones anteriores quedan con null, sin modificar sus otros datos. Los enums están en MODEL/CaracteristicasMascota.cs; no son nuevas entidades ni tablas. Los IDs explícitos no deben renumerarse.
+
+POST acepta números o null y permite omitir los campos. El servicio valida antes de mapearlos al modelo; EF los guarda con el repositorio existente. Detalle, listado y resolución devuelven los mismos valores. PostgreSQL también restringe rangos y combinaciones. Para Perro/Gato están disponibles los cinco; para Otro, Tamaño y ColorPredominante. El resto puede describirse en el texto del aviso. La regla depende de la especie y no del tipo de aviso, por lo que la API permite características opcionales también en adopciones.
+
+GET `/api/publicaciones/caracteristicas?tipoMascota=1` es público y devuelve campos y opciones aptos para esa especie. El catálogo no incluye una opción numérica «No sé»: Flutter omite el campo cuando se elige Sin indicar. El endpoint no consulta la base ni requiere un repositorio nuevo. Flutter ya incorpora los DTO y los selectores al crear los cuatro tipos de aviso; el detalle muestra las características informadas y la búsqueda permite filtrar por ellas. No se implementan fotos, coincidencias ni IA en este cambio.
 
 Implementar almacenamiento y carga/consulta de imágenes opcionales, con validación de formato/tamaño y permisos. Edición, eliminación y reapertura de avisos no están incluidas en este bloque.
 

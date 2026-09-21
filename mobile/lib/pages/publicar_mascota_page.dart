@@ -33,6 +33,31 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
   String? _localidad, _error;
   DateTime? _fecha;
   bool _ocupado = false;
+  late Future<List<CaracteristicaMascotaDto>> _opciones;
+  final Map<String, int> _caracteristicas = {};
+  int _revisionCaracteristicas = 0;
+  @override
+  void initState() {
+    super.initState();
+    _opciones = _cargarOpciones();
+  }
+
+  Future<List<CaracteristicaMascotaDto>> _cargarOpciones() {
+    final future = widget.service.caracteristicas(_mascota);
+    // FutureBuilder muestra el error; observarlo también antes del próximo frame.
+    future.ignore();
+    return future;
+  }
+
+  void _cambiarMascota(int tipo) {
+    setState(() {
+      _mascota = tipo;
+      _caracteristicas.clear();
+      _revisionCaracteristicas++;
+      _opciones = _cargarOpciones();
+    });
+  }
+
   @override
   void dispose() {
     for (final c in [_nombre, _descripcion, _zona, _contacto]) {
@@ -60,6 +85,11 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
           localidadId: _localidad!,
           zona: _zona.text.trim(),
           informacionContacto: _contacto.text.trim(),
+          tamano: _caracteristicas['tamano'],
+          raza: _caracteristicas['raza'],
+          pelaje: _caracteristicas['pelaje'],
+          colorPredominante: _caracteristicas['colorPredominante'],
+          colorOjos: _caracteristicas['colorOjos'],
         ),
       );
       if (!mounted) return;
@@ -102,7 +132,13 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
                           DropdownMenuItem(value: e.key, child: Text(e.value)),
                     )
                     .toList(),
-                onChanged: _ocupado ? null : (v) => setState(() => _tipo = v!),
+                onChanged: _ocupado
+                    ? null
+                    : (v) => setState(() {
+                        _tipo = v!;
+                        _caracteristicas.clear();
+                        _revisionCaracteristicas++;
+                      }),
               ),
               DropdownButtonFormField<int>(
                 isExpanded: true,
@@ -114,10 +150,82 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
                           DropdownMenuItem(value: e.key, child: Text(e.value)),
                     )
                     .toList(),
-                onChanged: _ocupado
-                    ? null
-                    : (v) => setState(() => _mascota = v!),
+                onChanged: _ocupado ? null : (v) => _cambiarMascota(v!),
               ),
+              const SizedBox(height: 16),
+              Text(
+                _tipo == 4
+                    ? 'Características que buscás (opcionales)'
+                    : 'Características de la mascota (opcionales)',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Text(
+                _tipo == 4
+                    ? 'Dejá sin indicar lo que te resulte indistinto.'
+                    : 'Si no conocés algún dato, dejalo sin indicar.',
+              ),
+              FutureBuilder<List<CaracteristicaMascotaDto>>(
+                future: _opciones,
+                builder: (context, snapshot) {
+                  // No mostrar opciones del animal anterior mientras llega la nueva consulta.
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const LinearProgressIndicator();
+                  }
+                  if (snapshot.hasError) {
+                    return Column(
+                      children: [
+                        const Text(
+                          'No pudimos cargar las características. Podés publicar sin completarlas.',
+                        ),
+                        TextButton(
+                          onPressed: _ocupado
+                              ? null
+                              : () => setState(() {
+                                  _opciones = _cargarOpciones();
+                                }),
+                          child: const Text('Reintentar características'),
+                        ),
+                      ],
+                    );
+                  }
+                  return Column(
+                    children: [
+                      for (final campo in snapshot.data!)
+                        DropdownButtonFormField<int>(
+                          key: ValueKey(
+                            '$_revisionCaracteristicas:${campo.campo}',
+                          ),
+                          initialValue: _caracteristicas[campo.campo] ?? 0,
+                          isExpanded: true,
+                          decoration: InputDecoration(labelText: campo.nombre),
+                          items: [
+                            const DropdownMenuItem(
+                              value: 0,
+                              child: Text('Sin indicar'),
+                            ),
+                            ...campo.opciones.map(
+                              (o) => DropdownMenuItem(
+                                value: o.id,
+                                child: Text(o.nombre),
+                              ),
+                            ),
+                          ],
+                          onChanged: _ocupado
+                              ? null
+                              : (v) => setState(() {
+                                  // 0 es solo la opción visual; nunca se envía a la API.
+                                  if (v == null || v == 0) {
+                                    _caracteristicas.remove(campo.campo);
+                                  } else {
+                                    _caracteristicas[campo.campo] = v;
+                                  }
+                                }),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
               if (_tipo != 4)
                 TextFormField(
                   controller: _nombre,

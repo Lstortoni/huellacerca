@@ -164,6 +164,9 @@ class AuthServiceApi extends ChangeNotifier implements AuthService {
   @override
   Future<Object?> getProtegido(String path) =>
       _protegido((token) => _api.getJson(path, accessToken: token));
+  @override
+  Future<Object?> subirFotoProtegida(String path, Uint8List bytes) =>
+      _protegido((token) => _api.subirFoto(path, bytes, accessToken: token));
 
   @override
   Future<Object?> postProtegido(String path, Map<String, Object?> body) =>

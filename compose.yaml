@@ -41,6 +41,11 @@ services:
       Jwt__Audience: HuellaCercaMobile
       Jwt__AccessMinutes: "15"
       Jwt__RefreshDays: "30"
+      R2__Enabled: ${R2_ENABLED:-false}
+      R2__Endpoint: ${R2_ENDPOINT:-}
+      R2__Bucket: ${R2_BUCKET:-}
+      R2__AccessKeyId: ${R2_ACCESS_KEY_ID:-}
+      R2__SecretAccessKey: ${R2_SECRET_ACCESS_KEY:-}
       ConnectionStrings__DefaultConnection: "Host=huellacerca_db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
     ports:
       - "127.0.0.1:${API_HOST_PORT:-5080}:8080"

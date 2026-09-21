@@ -5,6 +5,7 @@ import '../../models/auth_dto.dart';
 /// Contrato de sesión observable. No define HTTP ni almacenamiento.
 /// Listenable permite a la barra escuchar cambios sin conocer la implementación.
 abstract class AuthService implements Listenable {
+  Future<Object?> subirFotoProtegida(String path, Uint8List bytes);
   UsuarioDto? get usuario;
   bool get autenticado;
   bool get restaurando;

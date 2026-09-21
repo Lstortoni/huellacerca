@@ -101,14 +101,20 @@ public sealed class PublicacionService(IPublicacionRepository repository, IAuthR
         var origen = await ObtenerAsync(id, ct);
         if (origen.MascoteroId != mascoteroId)
             throw new AppException(403, "Solo el autor puede consultar las coincidencias de su aviso.");
-        if (origen.Estado != EstadoPublicacionMascota.Activa || (int)origen.TipoPublicacion > 2 || origen.FechaSuceso is null)
+        var requiereFecha = origen.TipoPublicacion is TipoPublicacionMascota.Perdida or TipoPublicacionMascota.Encontrada;
+        if (origen.Estado != EstadoPublicacionMascota.Activa || (requiereFecha && origen.FechaSuceso is null))
             return new([], 0, query.Pagina, query.TamanoPagina);
         // Hallazgo entre -3 y +30 días del extravío. Invertir el intervalo al consultar un hallazgo.
-        var perdida = origen.TipoPublicacion == TipoPublicacionMascota.Perdida;
-        DateOnly Desplazar(int dias) => DateOnly.FromDayNumber(Math.Clamp(
-            origen.FechaSuceso.Value.DayNumber + dias, DateOnly.MinValue.DayNumber, DateOnly.MaxValue.DayNumber));
-        var (items, total) = await repository.CoincidenciasAsync(origen,
-            Desplazar(perdida ? -3 : -30), Desplazar(perdida ? 30 : 3), query, ct);
+        DateOnly? desde = null, hasta = null;
+        if (requiereFecha && origen.FechaSuceso is DateOnly fecha)
+        {
+            var perdida = origen.TipoPublicacion == TipoPublicacionMascota.Perdida;
+            DateOnly Desplazar(int dias) => DateOnly.FromDayNumber(Math.Clamp(
+                fecha.DayNumber + dias, DateOnly.MinValue.DayNumber, DateOnly.MaxValue.DayNumber));
+            desde = Desplazar(perdida ? -3 : -30);
+            hasta = Desplazar(perdida ? 30 : 3);
+        }
+        var (items, total) = await repository.CoincidenciasAsync(origen, desde, hasta, query, ct);
         var resultados = items.Select(p => {
             var campos = new List<string>();
             if (origen.Tamano.HasValue && p.Tamano == origen.Tamano) campos.Add("Tamaño");
@@ -132,6 +138,6 @@ public sealed class PublicacionService(IPublicacionRepository repository, IAuthR
         (int)p.TipoPublicacion, (int)p.TipoMascota, p.NombreMascota, p.Descripcion, p.FechaSuceso,
         p.LocalidadId, p.Localidad.Nombre, p.Localidad.ProvinciaId, p.Localidad.Provincia.Nombre,
         p.Zona, p.InformacionContacto, p.FechaCreacion, (int)p.Estado,
-        p.Fotografias.OrderBy(x => x.Orden).Select(x => new FotoPublicacionDto(x.Id, x.Orden)).ToList(),
+        p.Foto is null ? null : new FotoPublicacionDto(p.Foto.Id, $"api/publicaciones/{p.Id}/foto?v={p.Foto.Id}"),
         (int?)p.Tamano, (int?)p.Raza, (int?)p.Pelaje, (int?)p.ColorPredominante, (int?)p.ColorOjos);
 }

@@ -38,6 +38,17 @@ builder.Services.AddScoped<IRecomendacionRepository, RecomendacionRepository>();
 builder.Services.AddScoped<IRecomendacionService, RecomendacionService>();
 builder.Services.AddScoped<IPublicacionRepository, PublicacionRepository>();
 builder.Services.AddScoped<IPublicacionService, PublicacionService>();
+builder.Services.AddScoped<IFotoRepository, FotoRepository>();
+builder.Services.AddScoped<IFotoService, FotoService>();
+builder.Services.AddSingleton<IProcesadorFoto, HuellaCerca.INFRASTRUCTURE.Storage.ProcesadorFoto>();
+builder.Services.AddOptions<HuellaCerca.INFRASTRUCTURE.Storage.R2Settings>().Bind(builder.Configuration.GetSection("R2"))
+    .Validate(x => !x.Enabled || (Uri.TryCreate(x.Endpoint, UriKind.Absolute, out var uri)
+        && uri.Scheme == "https" && !string.IsNullOrWhiteSpace(x.Bucket)
+        && !string.IsNullOrWhiteSpace(x.AccessKeyId) && !string.IsNullOrWhiteSpace(x.SecretAccessKey)),
+        "Configurar R2:Endpoint HTTPS, Bucket, AccessKeyId y SecretAccessKey al habilitar fotos.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IAlmacenamientoFotos, HuellaCerca.INFRASTRUCTURE.Storage.R2Fotos>();
+builder.Services.AddHostedService<HuellaCerca.API.Fotos.LimpiezaFotos>();
 builder.Services.AddSingleton<ICredenciales, Credenciales>();
 builder.Services.AddOptions<JwtSettings>().Bind(builder.Configuration.GetSection("Jwt"))
     .Validate(x => Encoding.UTF8.GetByteCount(x.Key) >= 32 && !x.Key.StartsWith("CAMBIAR_") && !string.IsNullOrWhiteSpace(x.Issuer) && !string.IsNullOrWhiteSpace(x.Audience), "Configurar Jwt:Key (mínimo 32 bytes), Issuer y Audience.")
@@ -71,6 +82,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
+    options.AddPolicy("fotos", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("sub")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 15, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));

@@ -28,7 +28,9 @@ const estadosPublicacion = {1: 'Activa', 2: 'Resuelta'};
 
 class CoincidenciaPublicacionDto {
   CoincidenciaPublicacionDto.fromJson(Map<String, dynamic> j)
-    : publicacion = PublicacionDto.fromJson(j['publicacion'] as Map<String, dynamic>),
+    : publicacion = PublicacionDto.fromJson(
+        j['publicacion'] as Map<String, dynamic>,
+      ),
       coincideEn = (j['coincideEn'] as List).cast<String>();
   final PublicacionDto publicacion;
   final List<String> coincideEn;
@@ -67,6 +69,7 @@ class PublicacionDto {
       pelaje = j['pelaje'] as int?,
       colorPredominante = j['colorPredominante'] as int?,
       colorOjos = j['colorOjos'] as int?,
+      fotoUrl = (j['foto'] as Map<String, dynamic>?)?['url'] as String?,
       nombreMascota = j['nombreMascota'] as String?,
       descripcion = j['descripcion'] as String,
       fechaSuceso = j['fechaSuceso'] == null
@@ -87,6 +90,7 @@ class PublicacionDto {
       zona,
       informacionContacto;
   final String? nombreMascota;
+  final String? fotoUrl;
   final int tipoPublicacion, tipoMascota, estado;
   final int? tamano, raza, pelaje, colorPredominante, colorOjos;
   final DateTime? fechaSuceso;

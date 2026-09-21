@@ -8,6 +8,7 @@ import '../widgets/barra_superior.dart';
 import '../widgets/campo_ubicacion.dart';
 import '../widgets/contenido_formulario.dart';
 import 'publicacion_detalle_page.dart';
+import '../models/foto_seleccionada.dart';
 
 class PublicarMascotaPage extends StatefulWidget {
   const PublicarMascotaPage({
@@ -33,6 +34,27 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
   String? _localidad, _error;
   DateTime? _fecha;
   bool _ocupado = false;
+  bool _eligiendoFoto = false;
+  FotoSeleccionada? _foto;
+  String? _errorFoto;
+  Future<void> _elegirFoto({bool recuperar = false}) async {
+    if (_ocupado || _eligiendoFoto) return;
+    setState(() {
+      _eligiendoFoto = true;
+      _errorFoto = null;
+    });
+    try {
+      final foto = recuperar
+          ? await widget.service.recuperarFoto()
+          : await widget.service.elegirFoto();
+      if (mounted && foto != null) setState(() => _foto = foto);
+    } catch (e) {
+      if (mounted) setState(() => _errorFoto = mensajeError(e));
+    } finally {
+      if (mounted) setState(() => _eligiendoFoto = false);
+    }
+  }
+
   late Future<List<CaracteristicaMascotaDto>> _opciones;
   final Map<String, int> _caracteristicas = {};
   int _revisionCaracteristicas = 0;
@@ -40,6 +62,9 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
   void initState() {
     super.initState();
     _opciones = _cargarOpciones();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _elegirFoto(recuperar: true);
+    });
   }
 
   Future<List<CaracteristicaMascotaDto>> _cargarOpciones() {
@@ -67,7 +92,7 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
   }
 
   Future<void> _publicar() async {
-    if (_ocupado || !_form.currentState!.validate()) return;
+    if (_ocupado || _eligiendoFoto || !_form.currentState!.validate()) return;
     setState(() {
       _ocupado = true;
       _error = null;
@@ -99,6 +124,7 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
             id: p.id,
             auth: widget.auth,
             service: widget.service,
+            fotoPendiente: _foto,
           ),
         ),
       );
@@ -120,6 +146,32 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const Text('Foto de la mascota (opcional)'),
+              if (_foto != null)
+                Image.memory(
+                  _foto!.bytes,
+                  height: 170,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) =>
+                      const Text('No pudimos mostrar la vista previa.'),
+                ),
+              if (_errorFoto != null) Text(_errorFoto!),
+              Wrap(
+                children: [
+                  TextButton.icon(
+                    onPressed: _ocupado || _eligiendoFoto ? null : _elegirFoto,
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: Text(_foto == null ? 'Elegir foto' : 'Cambiar foto'),
+                  ),
+                  if (_foto != null)
+                    TextButton(
+                      onPressed: _ocupado
+                          ? null
+                          : () => setState(() => _foto = null),
+                      child: const Text('Quitar foto'),
+                    ),
+                ],
+              ),
               DropdownButtonFormField<int>(
                 isExpanded: true,
                 initialValue: _tipo,

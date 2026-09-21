@@ -50,7 +50,7 @@ public sealed class PublicacionesQuery : IValidatableObject
 public sealed record PublicacionDto(Guid Id, Guid MascoteroId, string Autor, int TipoPublicacion,
     int TipoMascota, string? NombreMascota, string Descripcion, DateOnly? FechaSuceso,
     Guid LocalidadId, string Localidad, Guid ProvinciaId, string Provincia, string Zona,
-    string InformacionContacto, DateTime FechaCreacion, int Estado, IReadOnlyList<FotoPublicacionDto> Fotografias,
+    string InformacionContacto, DateTime FechaCreacion, int Estado, FotoPublicacionDto? Foto,
     int? Tamano, int? Raza, int? Pelaje, int? ColorPredominante, int? ColorOjos);
 
 public sealed record OpcionCaracteristicaDto(int Id, string Nombre);
@@ -63,5 +63,5 @@ public sealed class CoincidenciasQuery
 public sealed record CoincidenciaPublicacionDto(PublicacionDto Publicacion, IReadOnlyList<string> CoincideEn);
 public sealed record CaracteristicaMascotaDto(string Campo, string Nombre, IReadOnlyList<OpcionCaracteristicaDto> Opciones);
 
-// La carga y entrega de archivos se incorporará en el siguiente bloque.
-public sealed record FotoPublicacionDto(Guid Id, int Orden);
+// URL relativa a la API; nunca expone credenciales ni el contenido binario en JSON.
+public sealed record FotoPublicacionDto(Guid Id, string Url);

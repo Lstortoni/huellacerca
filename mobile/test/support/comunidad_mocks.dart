@@ -1,4 +1,5 @@
 import 'package:huella_cerca/models/pagina_dto.dart';
+import 'package:huella_cerca/models/foto_seleccionada.dart';
 import 'package:huella_cerca/models/publicacion_dto.dart';
 import 'package:huella_cerca/models/recomendacion_dto.dart';
 import 'package:huella_cerca/services/contracts/publicacion_service.dart';
@@ -43,7 +44,21 @@ Map<String, dynamic> recomendacionJson() => {
 
 class PublicacionServiceMock implements PublicacionService {
   @override
-  Future<PaginaDto<CoincidenciaPublicacionDto>> coincidencias(String id, {int pagina = 1, int tamanoPagina = 10}) async => PaginaDto([], 0, pagina, tamanoPagina);
+  Future<FotoSeleccionada?> elegirFoto() async => null;
+  @override
+  Future<FotoSeleccionada?> recuperarFoto() async => null;
+  @override
+  Future<void> subirFoto(String id, FotoSeleccionada foto) async {}
+  @override
+  Future<void> eliminarFoto(String id) async {}
+  @override
+  String urlFoto(String path) => 'http://localhost/$path';
+  @override
+  Future<PaginaDto<CoincidenciaPublicacionDto>> coincidencias(
+    String id, {
+    int pagina = 1,
+    int tamanoPagina = 10,
+  }) async => PaginaDto([], 0, pagina, tamanoPagina);
   bool falloCaracteristicas = false;
   @override
   Future<List<CaracteristicaMascotaDto>> caracteristicas(

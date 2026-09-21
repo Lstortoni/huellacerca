@@ -39,12 +39,11 @@ public sealed class FotoPublicacionConfiguration : IEntityTypeConfiguration<Foto
 {
     public void Configure(EntityTypeBuilder<FotoPublicacion> b)
     {
-        b.ToTable("fotos_publicaciones", t =>
-            t.HasCheckConstraint("CK_fotos_publicaciones_orden", "\"Orden\" >= 0"));
+        b.ToTable("fotos_publicaciones");
         b.HasKey(x => x.Id);
-        b.Property(x => x.RutaArchivo).HasMaxLength(500).IsRequired();
-        b.HasOne(x => x.PublicacionMascota).WithMany(x => x.Fotografias)
-            .HasForeignKey(x => x.PublicacionMascotaId).OnDelete(DeleteBehavior.Cascade);
-        b.HasIndex(x => new { x.PublicacionMascotaId, x.Orden }).IsUnique();
+        b.Property(x => x.ObjectKey).HasMaxLength(500).IsRequired();
+        b.HasOne(x => x.PublicacionMascota).WithOne(x => x.Foto)
+            .HasForeignKey<FotoPublicacion>(x => x.PublicacionMascotaId).OnDelete(DeleteBehavior.Cascade);
+        b.HasIndex(x => x.PublicacionMascotaId).IsUnique();
     }
 }

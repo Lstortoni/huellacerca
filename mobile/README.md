@@ -97,7 +97,7 @@ Estos nombres de carpetas son convenciones elegidas para organizar el código, n
 | --- | --- | --- |
 | Buscar mascotas | `/mascotas` | Filtros, paginación, detalle y contacto públicos. |
 | Servicios recomendados | `/servicios` | Búsqueda por texto, rubro y ubicación; detalle público. |
-| Publicar un aviso | `/mascotas/publicar` | Formulario autenticado, sin fotos; después abre el detalle. |
+| Publicar un aviso | `/mascotas/publicar` | Formulario autenticado con una foto opcional; después abre el detalle y sube la foto. |
 | Recomendar un servicio | `/servicios/recomendar` | Busca similares, permite elegir prestador o crear uno con la recomendación. |
 
 Los destinos utilizan servicios reales. Las páginas reciben contratos por constructor; no llaman a HTTP directamente. Los detalles se abren con MaterialPageRoute pasando el ID y los mismos contratos. Después de crear se reemplaza el formulario por el detalle para evitar volver accidentalmente al formulario enviado. Login y registro conservan su regreso al inicio.
@@ -106,7 +106,7 @@ En mascotas se muestran activas por defecto. Se puede filtrar Perdida/Encontrada
 
 En recomendaciones, la selección de un prestador similar evita crear uno nuevo. También se permite crear otro aunque haya coincidencias. Modificar nombre, rubro o localidad invalida la búsqueda y selección previas. El DTO de creación envía solo prestadorServicioId o nuevoPrestador, nunca ambos. Dirección, teléfono y enlace son opcionales para el nuevo prestador. No hay llamadas a Google Places.
 
-Las búsquedas incluyen estados de carga, error con reintento, resultados vacíos y páginas de 20 elementos. Los formularios validan campos, deshabilitan envío mientras guardan y requieren sesión. La carga/visualización de fotografías queda pendiente: se permite publicar sin fotos y no se envían rutas ficticias. Se pueden modificar los aspectos seleccionados y retirar la recomendación desde la ficha del prestador.
+Las búsquedas incluyen carga, error con reintento, resultados vacíos y páginas de 20 elementos. Los formularios validan campos y requieren sesión. La foto es opcional: selección desde galería, reducción inicial, subida desde el detalle, reintento sin duplicar el aviso y controles del autor para reemplazar/eliminar. Se muestra en detalle, búsqueda y coincidencias. Configuración R2 exclusivamente en el backend: [guía de fotos](../docs/fotos-r2.md). Se pueden modificar los aspectos seleccionados y retirar la recomendación desde la ficha del prestador.
 
 La pantalla de inicio es un `StatelessWidget`: su información cambiante está en `AuthService`, que avisa a `ListenableBuilder`. No necesita su propia carga de provincias ni estado local. La disposición vertical permite desplazarse y limita el ancho en pantallas grandes.
 

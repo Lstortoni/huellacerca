@@ -83,32 +83,42 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HuellaCerca.MODEL.FotoPendienteLimpieza", b =>
+                {
+                    b.Property<string>("ObjectKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("LimpiarDesdeUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ObjectKey");
+
+                    b.HasIndex("LimpiarDesdeUtc");
+
+                    b.ToTable("fotos_pendientes_limpieza", (string)null);
+                });
+
             modelBuilder.Entity("HuellaCerca.MODEL.FotoPublicacion", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Orden")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("PublicacionMascotaId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("RutaArchivo")
+                    b.Property<string>("ObjectKey")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<Guid>("PublicacionMascotaId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("PublicacionMascotaId", "Orden")
+                    b.HasIndex("PublicacionMascotaId")
                         .IsUnique();
 
-                    b.ToTable("fotos_publicaciones", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_fotos_publicaciones_orden", "\"Orden\" >= 0");
-                        });
+                    b.ToTable("fotos_publicaciones", (string)null);
                 });
 
             modelBuilder.Entity("HuellaCerca.MODEL.Localidad", b =>
@@ -579,8 +589,8 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
             modelBuilder.Entity("HuellaCerca.MODEL.FotoPublicacion", b =>
                 {
                     b.HasOne("HuellaCerca.MODEL.PublicacionMascota", "PublicacionMascota")
-                        .WithMany("Fotografias")
-                        .HasForeignKey("PublicacionMascotaId")
+                        .WithOne("Foto")
+                        .HasForeignKey("HuellaCerca.MODEL.FotoPublicacion", "PublicacionMascotaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -753,7 +763,7 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
 
             modelBuilder.Entity("HuellaCerca.MODEL.PublicacionMascota", b =>
                 {
-                    b.Navigation("Fotografias");
+                    b.Navigation("Foto");
                 });
 
             modelBuilder.Entity("HuellaCerca.MODEL.Recomendacion", b =>

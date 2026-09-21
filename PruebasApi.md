@@ -554,7 +554,7 @@ Body → raw → JSON:
 
 Reemplazá LOCALIDAD_ID por un ID obtenido en la consulta de localidades. FechaSuceso usa `AAAA-MM-DD` y no puede ser futura. NombreMascota puede ser null u omitirse. Las fotos son opcionales; todavía no se envían archivos en este endpoint.
 
-**Esperado:** 201, encabezado Location con el detalle y JSON de la publicación. Guardá su `id` como PUBLICACION_ID. Devuelve `estado: 1`, `fotografias: []`, autor y nombres de localidad/provincia. No se envían MascoteroId, Estado ni FechaCreacion: los determina la API. El contacto ingresado será visible en las consultas públicas.
+**Esperado:** 201, encabezado Location con el detalle y JSON de la publicación. Guardá su `id` como PUBLICACION_ID. Devuelve `estado: 1`, `foto: null`, autor y nombres de localidad/provincia. No se envían MascoteroId, Estado ni FechaCreacion: los determina la API. El contacto ingresado será visible en las consultas públicas.
 
 Para un aviso de mascota encontrada usar `tipoPublicacion: 2`.
 Para dar en adopción usar `tipoPublicacion: 3`; para buscar adoptar, `4`. En ambos casos se omite `fechaSuceso`: la API devuelve null y se usa `fechaCreacion`. Buscar con `?tipoPublicacion=3` o `?tipoPublicacion=4`. Requiere la migración BuscoAdoptarFechaOpcional.
@@ -582,6 +582,16 @@ http://localhost:5080/api/publicaciones?tipoMascota=1&tamano=2&raza=2&estado=1&p
 ```
 
 Devuelve perros medianos y mestizos activos. Los filtros se combinan entre sí y con ubicación, fechas y tipo de publicación. Un aviso con tamaño null no satisface `tamano=2`. Sin filtros de características, los avisos sin esos datos siguen incluidos. Para quitarlos, omitir el parámetro, no enviar cero. `raza=99` o `tipoMascota=3&raza=1` devuelven 400. Esto es búsqueda exacta, no detección de posibles coincidencias.
+
+### Posibles coincidencias de un aviso propio
+
+`GET http://localhost:5080/api/publicaciones/{{publicacionId}}/coincidencias?pagina=1&tamanoPagina=5`
+
+Authorization: Bearer Token con el accessToken del autor. Sin body. Devuelve 200 con `items` (cada uno tiene `publicacion` y `coincideEn`), `total`, `pagina`, `tamanoPagina`. Sin JWT: 401; otro autor: 403. Máximo 20 resultados por página.
+
+Prueba adopción: crear un aviso tipo 4 (BuscoAdoptar) y otro tipo 3 (Adopcion) con `tipoMascota: 1`, la misma `localidadId`, `raza: 2` y `colorPredominante: 1`. No necesitan `fechaSuceso`. Consultar coincidencias de cualquiera con su autor: el otro debe aparecer. Una sola característica coincidente alcanza, aunque otra difiera. Tipos 1/2 no aparecen en este cruce. Al resolver un candidato deja de aparecer.
+
+Para tipos 1/2 se conserva el cruce extraviada/encontrada y el margen de fechas del hallazgo (-3 a +30 días respecto del extravío). Ambos cruces exigen misma especie/localidad y candidatos activos.
 
 **GET** `http://localhost:5080/api/publicaciones`
 
@@ -620,6 +630,22 @@ Todos los filtros son opcionales. También acepta `provinciaId` y `mascoteroId`.
 - Resolver un ID inexistente con token válido: **404**.
 - Crear con fecha futura, localidad inexistente, descripción menor a 10 caracteres útiles, zona/contacto vacíos o tipos fuera de los valores indicados: **400**.
 - Buscar con `pagina=0`, `tamanoPagina=101` o fechaDesde posterior a fechaHasta: **400**.
+
+## Fotos de publicaciones (R2)
+
+Configuración del bucket y variables: [docs/fotos-r2.md](docs/fotos-r2.md).
+
+**Subir o reemplazar:** `PUT http://localhost:5080/api/publicaciones/PUBLICACION_ID/foto`
+
+Authorization → Bearer Token → accessToken del autor. Body → form-data → clave `archivo`, cambiar su tipo de Text a File y elegir una sola imagen JPEG, PNG o WebP (hasta 10 MiB). No usar raw JSON ni fijar Content-Type manualmente: Postman agrega el boundary multipart.
+
+Esperado: 200 con `{ "id": "ID_FOTO", "url": "api/publicaciones/PUBLICACION_ID/foto?v=ID_FOTO" }`. Repetir reemplaza la foto, no agrega una segunda. La API la optimiza a WebP de hasta 250 KiB. Sin R2 configurado devuelve 503; el aviso sigue creado y puede reintentarse este PUT.
+
+**Ver:** `GET http://localhost:5080/api/publicaciones/PUBLICACION_ID/foto`. No Auth, sin body. Devuelve bytes image/webp; se puede abrir en un navegador. Sin foto devuelve 404. El GET del detalle/listado ahora incluye `foto: null` o el objeto anterior, en lugar de `fotografias: []`.
+
+**Eliminar:** `DELETE http://localhost:5080/api/publicaciones/PUBLICACION_ID/foto`. Bearer del autor, sin body, devuelve 204. Solo elimina la foto, conserva el aviso. El archivo R2 se limpia en segundo plano.
+
+Validar: sin JWT al modificar → 401; otro autor → 403; formato corrupto/no admitido → 400; archivo >10 MiB → 413; reemplazos simultáneos → uno puede devolver 409 y se debe recargar el detalle; límite de subidas → 429 (15 por minuto por usuario).
 
 ## Resumen de respuestas
 

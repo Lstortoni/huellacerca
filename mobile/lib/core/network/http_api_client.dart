@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -19,6 +20,41 @@ class HttpApiClient implements ApiClient {
   final Uri _baseUri;
   final http.Client _client;
   final Duration timeout;
+  @override
+  String resolverUrl(String path) => _baseUri.resolve(path).toString();
+  @override
+  Future<Object?> subirFoto(
+    String path,
+    Uint8List bytes, {
+    required String accessToken,
+  }) async {
+    try {
+      final request = http.MultipartRequest('PUT', _baseUri.resolve(path))
+        ..headers['Authorization'] = 'Bearer $accessToken'
+        ..files.add(
+          http.MultipartFile.fromBytes('archivo', bytes, filename: 'foto'),
+        );
+      final response = await _client
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(const Duration(seconds: 60));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ApiException(
+          response.statusCode >= 500
+              ? 'No pudimos guardar la foto. Tu aviso sigue creado; podés reintentar.'
+              : _errorMessage(response),
+          statusCode: response.statusCode,
+        );
+      }
+      return _decode(utf8.decode(response.bodyBytes));
+    } on TimeoutException {
+      throw const ApiException(
+        'La subida tardó demasiado. Revisá el aviso y volvé a intentar.',
+      );
+    } on http.ClientException {
+      throw const ApiException('No pudimos subir la foto. Revisá tu conexión.');
+    }
+  }
 
   @override
   Future<String> getText(

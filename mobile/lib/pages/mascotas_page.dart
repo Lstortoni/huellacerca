@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/foto_publicacion.dart';
+
 import '../models/publicacion_dto.dart';
 import '../services/contracts/auth_service.dart';
 import '../services/contracts/publicacion_service.dart';
@@ -285,7 +287,10 @@ class _MascotasPageState extends State<MascotasPage> {
                 widget.service.buscar(filtros: _filtros, pagina: pagina),
             itemBuilder: (p, recargar) => Card(
               child: ListTile(
-                leading: const Icon(Icons.pets_outlined),
+                leading: MiniaturaPublicacion(
+                  publicacion: p,
+                  service: widget.service,
+                ),
                 title: Text(
                   '${p.titulo} · ${etiquetasPublicacion[p.tipoPublicacion]}',
                 ),

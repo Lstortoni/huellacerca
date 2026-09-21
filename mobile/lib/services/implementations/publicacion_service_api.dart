@@ -3,14 +3,39 @@ import '../../models/pagina_dto.dart';
 import '../../models/publicacion_dto.dart';
 import '../contracts/auth_service.dart';
 import '../contracts/publicacion_service.dart';
+import '../contracts/selector_fotos.dart';
+import '../../models/foto_seleccionada.dart';
 
 class PublicacionServiceApi implements PublicacionService {
-  PublicacionServiceApi(this._api, this._auth);
+  PublicacionServiceApi(this._api, this._auth, [this._selector]);
+  final SelectorFotos? _selector;
+  @override
+  Future<FotoSeleccionada?> elegirFoto() async => _selector?.elegir();
+  @override
+  Future<FotoSeleccionada?> recuperarFoto() async => _selector?.recuperar();
+  @override
+  Future<void> subirFoto(String id, FotoSeleccionada foto) async {
+    await _auth.subirFotoProtegida('api/publicaciones/$id/foto', foto.bytes);
+  }
+
+  @override
+  Future<void> eliminarFoto(String id) =>
+      _auth.deleteProtegido('api/publicaciones/$id/foto');
+  @override
+  String urlFoto(String path) => _api.resolverUrl(path);
   final ApiClient _api;
   final AuthService _auth;
   @override
-  Future<PaginaDto<CoincidenciaPublicacionDto>> coincidencias(String id, {int pagina = 1, int tamanoPagina = 10}) async =>
-    PaginaDto.fromJson(await _auth.getProtegido('api/publicaciones/$id/coincidencias?pagina=$pagina&tamanoPagina=$tamanoPagina') as Map<String, dynamic>, CoincidenciaPublicacionDto.fromJson);
+  Future<PaginaDto<CoincidenciaPublicacionDto>> coincidencias(
+    String id, {
+    int pagina = 1,
+    int tamanoPagina = 10,
+  }) async => PaginaDto.fromJson(
+    await _auth.getProtegido(
+      'api/publicaciones/$id/coincidencias?pagina=$pagina&tamanoPagina=$tamanoPagina',
+    ) as Map<String, dynamic>,
+    CoincidenciaPublicacionDto.fromJson,
+  );
   @override
   Future<List<CaracteristicaMascotaDto>> caracteristicas(
     int tipoMascota,

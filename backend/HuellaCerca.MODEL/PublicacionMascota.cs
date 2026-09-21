@@ -22,5 +22,5 @@ public sealed class PublicacionMascota
     public EstadoPublicacionMascota Estado { get; set; } = EstadoPublicacionMascota.Activa;
     public Mascotero Mascotero { get; set; } = null!;
     public Localidad Localidad { get; set; } = null!;
-    public ICollection<FotoPublicacion> Fotografias { get; set; } = new List<FotoPublicacion>();
+    public FotoPublicacion? Foto { get; set; }
 }

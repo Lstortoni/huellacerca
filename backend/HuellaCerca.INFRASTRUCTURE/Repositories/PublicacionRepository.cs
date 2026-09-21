@@ -12,7 +12,7 @@ public sealed class PublicacionRepository(AppDbContext db) : IPublicacionReposit
     private IQueryable<PublicacionMascota> Publicaciones => db.PublicacionesMascotas
         .Include(x => x.Mascotero)
         .Include(x => x.Localidad).ThenInclude(x => x.Provincia)
-        .Include(x => x.Fotografias);
+        .Include(x => x.Foto);
 
     public void Agregar(PublicacionMascota publicacion) => db.PublicacionesMascotas.Add(publicacion);
 
@@ -67,15 +67,23 @@ public sealed class PublicacionRepository(AppDbContext db) : IPublicacionReposit
     }
 
     public async Task<(IReadOnlyList<PublicacionMascota> Items, int Total)> CoincidenciasAsync(
-        PublicacionMascota origen, DateOnly desde, DateOnly hasta, CoincidenciasQuery q, CancellationToken ct)
+        PublicacionMascota origen, DateOnly? desde, DateOnly? hasta, CoincidenciasQuery q, CancellationToken ct)
     {
-        var tipoOpuesto = origen.TipoPublicacion == TipoPublicacionMascota.Perdida
-            ? TipoPublicacionMascota.Encontrada : TipoPublicacionMascota.Perdida;
+        var tipoOpuesto = origen.TipoPublicacion switch
+        {
+            TipoPublicacionMascota.Perdida => TipoPublicacionMascota.Encontrada,
+            TipoPublicacionMascota.Encontrada => TipoPublicacionMascota.Perdida,
+            TipoPublicacionMascota.Adopcion => TipoPublicacionMascota.BuscoAdoptar,
+            TipoPublicacionMascota.BuscoAdoptar => TipoPublicacionMascota.Adopcion,
+            _ => throw new AppException(400, "Tipo de publicación no válido.")
+        };
         // Puntuar en SQL antes de paginar: nunca traer todos los candidatos a memoria.
         var candidatos = db.PublicacionesMascotas.AsNoTracking()
             .Where(x => x.Id != origen.Id && x.Estado == EstadoPublicacionMascota.Activa
                 && x.TipoPublicacion == tipoOpuesto && x.TipoMascota == origen.TipoMascota
-                && x.LocalidadId == origen.LocalidadId && x.FechaSuceso >= desde && x.FechaSuceso <= hasta)
+                && x.LocalidadId == origen.LocalidadId
+                && (!desde.HasValue || x.FechaSuceso >= desde)
+                && (!hasta.HasValue || x.FechaSuceso <= hasta))
             .Select(x => new {
                 x.Id, x.FechaCreacion,
                 Puntos = (origen.Tamano.HasValue && x.Tamano == origen.Tamano ? 1 : 0)

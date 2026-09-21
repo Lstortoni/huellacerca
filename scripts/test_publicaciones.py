@@ -78,7 +78,7 @@ call("POST", "/api/publicaciones", missing_date, token, 400)
 # Los campos de autor/estado adicionales no permiten suplantar al autor ni crear resuelta.
 first = call("POST", "/api/publicaciones", {**request, "mascoteroId": b["usuario"]["mascotero"]["id"], "estado": 2}, token, 201)
 assert first["mascoteroId"] == a["usuario"]["mascotero"]["id"]
-assert first["estado"] == 1 and first["fotografias"] == [] and first["nombreMascota"] is None
+assert first["estado"] == 1 and first["foto"] is None and first["nombreMascota"] is None
 assert first["provinciaId"] == province and first["localidadId"] == locality
 assert first["fechaSuceso"] == today.isoformat()
 assert all(first[field] is None for field in fields)
@@ -134,7 +134,7 @@ for item in (first, second):
     call("PATCH", path, token=b["accessToken"], expected=403)
 assert search(estado=1)["total"] == 0 and search(estado=2)["total"] == 2
 adoption = call("POST", "/api/publicaciones", {**request, "tipoPublicacion": 3}, token, 201)
-assert adoption["tipoPublicacion"] == 3 and adoption["fotografias"] == []
+assert adoption["tipoPublicacion"] == 3 and adoption["foto"] is None
 assert call("GET", "/api/publicaciones/" + adoption["id"])["tipoPublicacion"] == 3
 assert search(tipoPublicacion=3)["items"][0]["id"] == adoption["id"]
 call("PATCH", "/api/publicaciones/" + adoption["id"] + "/resolver", token=b["accessToken"], expected=403)
@@ -146,7 +146,7 @@ call("POST", "/api/publicaciones", wanted_request, expected=401)
 call("POST", "/api/publicaciones", {**wanted_request, "informacionContacto": " "}, token, 400)
 wanted = call("POST", "/api/publicaciones", wanted_request, token, 201)
 assert wanted["fechaSuceso"] is None and wanted["nombreMascota"] is None and wanted["zona"] == ""
-assert wanted["fotografias"] == [] and wanted["informacionContacto"] == request["informacionContacto"]
+assert wanted["foto"] is None and wanted["informacionContacto"] == request["informacionContacto"]
 filters = urllib.parse.urlencode(dict(tipoPublicacion=4, mascoteroId=wanted["mascoteroId"], fechaDesde=today.isoformat(), fechaHasta=today.isoformat()))
 assert wanted["id"] in [x["id"] for x in call("GET", "/api/publicaciones?" + filters)["items"]]
 tomorrow = (today + datetime.timedelta(days=1)).isoformat()

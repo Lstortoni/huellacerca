@@ -7,6 +7,8 @@ import '../widgets/barra_superior.dart';
 import '../widgets/contenido_formulario.dart';
 import '../widgets/caracteristicas_publicacion.dart';
 import '../widgets/coincidencias_publicacion.dart';
+import '../widgets/foto_publicacion.dart';
+import '../models/foto_seleccionada.dart';
 
 class PublicacionDetallePage extends StatefulWidget {
   const PublicacionDetallePage({
@@ -14,8 +16,10 @@ class PublicacionDetallePage extends StatefulWidget {
     required this.id,
     required this.auth,
     required this.service,
+    this.fotoPendiente,
   });
   final String id;
+  final FotoSeleccionada? fotoPendiente;
   final AuthService auth;
   final PublicacionService service;
   @override
@@ -100,7 +104,16 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.pets_outlined, size: 56),
+              ListenableBuilder(
+                listenable: widget.auth,
+                builder: (_, _) => FotoPublicacion(
+                  key: ValueKey('foto-${p.id}'),
+                  publicacion: p,
+                  service: widget.service,
+                  esAutor: widget.auth.usuario?.mascotero.id == p.mascoteroId,
+                  pendiente: widget.fotoPendiente,
+                ),
+              ),
               Text(p.titulo, style: Theme.of(context).textTheme.headlineMedium),
               Text(
                 '${etiquetasPublicacion[p.tipoPublicacion]} · ${tiposMascota[p.tipoMascota]} · ${estadosPublicacion[p.estado]}',
@@ -132,17 +145,38 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
               ListenableBuilder(
                 listenable: widget.auth,
                 builder: (_, _) =>
-                    p.estado == 1 &&
-                        widget.auth.usuario?.mascotero.id == p.mascoteroId
-                    ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [FilledButton(
-                        onPressed: _ocupado ? null : _resolver,
-                        child: Text(
-                          _ocupado ? 'Guardando…' : 'Marcar como resuelta',
-                        ),
-                      ),
-                      if (p.tipoPublicacion <= 2)
-                        CoincidenciasPublicacion(key: ValueKey(p.id), publicacion: p, auth: widget.auth, service: widget.service),
-                      ])
+                    widget.auth.usuario?.mascotero.id == p.mascoteroId
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (p.estado == 1)
+                            FilledButton(
+                              onPressed: _ocupado ? null : _resolver,
+                              child: Text(
+                                _ocupado
+                                    ? 'Guardando…'
+                                    : 'Marcar como resuelta',
+                              ),
+                            ),
+                          if (p.estado == 1)
+                            CoincidenciasPublicacion(
+                              key: ValueKey(p.id),
+                              publicacion: p,
+                              auth: widget.auth,
+                              service: widget.service,
+                            )
+                          else ...[
+                            const SizedBox(height: 24),
+                            Text(
+                              'Posibles coincidencias',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const Text(
+                              'Este aviso está resuelto. Ya no se consultan posibles coincidencias.',
+                            ),
+                          ],
+                        ],
+                      )
                     : const SizedBox.shrink(),
               ),
             ],

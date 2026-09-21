@@ -10,6 +10,9 @@ import 'auth_fakes.dart';
 
 /// Doble completo: no llama a HTTP ni usa almacenamiento nativo.
 class AuthServiceMock extends ChangeNotifier implements AuthService {
+  @override
+  Future<Object?> subirFotoProtegida(String path, Uint8List bytes) =>
+      throw UnimplementedError();
   UsuarioDto? _usuario;
   int restores = 0, disposals = 0, logins = 0;
   @override
@@ -93,6 +96,14 @@ class UbicacionServiceMock implements UbicacionService {
 
 /// El inicio todavía consulta health. Las demás consultas deben pasar por servicios.
 class ApiClientMock implements ApiClient {
+  @override
+  String resolverUrl(String path) => 'http://localhost/$path';
+  @override
+  Future<Object?> subirFoto(
+    String path,
+    Uint8List bytes, {
+    required String accessToken,
+  }) => throw UnimplementedError();
   @override
   Future<Object?> enviarJson(
     String method,

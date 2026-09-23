@@ -57,7 +57,11 @@ void main() {
     await auth.login(const LoginRequest('prueba@example.com', '12345678'));
     await tester.pumpAndSettle();
     expect(find.text('Hola, Ana'), findsOneWidget);
-    expect(find.byType(TarjetaInicio), findsNWidgets(5));
+    expect(find.byType(TarjetaInicio), findsNWidgets(4));
+    expect(
+      find.widgetWithText(FilledButton, 'Publicar un aviso'),
+      findsOneWidget,
+    );
     expect(find.widgetWithText(FilledButton, 'Ingresar'), findsNothing);
     await auth.logout();
     await tester.pumpAndSettle();
@@ -66,7 +70,7 @@ void main() {
   });
 
   testWidgets(
-    'Las cinco tarjetas abren las pantallas conectadas y permiten volver',
+    'Las tarjetas y el botón Publicar abren las pantallas conectadas y permiten volver',
     (tester) async {
       getIt.registerSingleton<UbicacionService>(UbicacionServiceMock());
       getIt.registerSingleton<PublicacionService>(PublicacionServiceMock());
@@ -99,7 +103,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           find.byType(TarjetaInicio),
-          findsNWidgets(auth.autenticado ? 5 : 2),
+          findsNWidgets(auth.autenticado ? 4 : 2),
         );
       }
     },

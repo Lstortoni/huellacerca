@@ -6,10 +6,10 @@ const tiposPublicacion = {
 };
 // En búsqueda hablamos de los avisos de otras personas, no de la acción del lector.
 const tiposPublicacionBusqueda = {
-  1: 'Mascotas extraviadas',
-  2: 'Mascotas encontradas',
-  3: 'Mascotas en adopción',
-  4: 'Personas que quieren adoptar',
+  1: 'Perdidas',
+  2: 'Encontradas',
+  3: 'En adopción',
+  4: 'Buscan adoptar',
 };
 const explicacionesPublicacion = {
   1: 'Su familia publicó el aviso porque perdió a su mascota y quiere encontrarla.',
@@ -24,6 +24,8 @@ const etiquetasPublicacion = {
   4: 'Busca adoptar',
 };
 const tiposMascota = {1: 'Perro', 2: 'Gato', 3: 'Otro'};
+// Emoji porque Material no tiene ícono de gato; se ven bien en Android sin paquetes.
+const iconosMascota = {1: '🐶', 2: '🐱', 3: '🐾'};
 const estadosPublicacion = {1: 'Activa', 2: 'Resuelta'};
 
 class CoincidenciaPublicacionDto {
@@ -108,12 +110,36 @@ class PublicacionDto {
   String get etiquetaFecha =>
       tipoPublicacion >= 3 ? 'Publicado' : 'Fecha del suceso';
   String get titulo => nombreMascota ?? tiposMascota[tipoMascota] ?? 'Mascota';
+
+  /// Ej.: "Se perdió hace 3 días", "Publicado hoy".
+  String get resumenFecha {
+    final cuando = fechaRelativa(fechaReferencia);
+    return switch (tipoPublicacion) {
+      1 => 'Se perdió $cuando',
+      2 => 'Se encontró $cuando',
+      _ => 'Publicado $cuando',
+    };
+  }
 }
 
 String fechaApi(DateTime fecha) =>
     '${fecha.year.toString().padLeft(4, '0')}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
 String fechaVisible(DateTime fecha) =>
     '${fecha.day}/${fecha.month}/${fecha.year}';
+
+/// Compara solo el día: "hoy", "ayer", "hace N días" o "el D/M/AAAA" desde 30 días.
+String fechaRelativa(DateTime fecha, {DateTime? ahora}) {
+  final hoy = ahora ?? DateTime.now();
+  final dias = DateTime.utc(
+    hoy.year,
+    hoy.month,
+    hoy.day,
+  ).difference(DateTime.utc(fecha.year, fecha.month, fecha.day)).inDays;
+  if (dias <= 0) return 'hoy';
+  if (dias == 1) return 'ayer';
+  if (dias < 30) return 'hace $dias días';
+  return 'el ${fechaVisible(fecha)}';
+}
 
 class CrearPublicacionRequest {
   const CrearPublicacionRequest({

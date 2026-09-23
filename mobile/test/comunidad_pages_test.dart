@@ -51,12 +51,16 @@ void main() {
       await auth.login(const LoginRequest('a@b.com', '12345678'));
       await tester.pumpAndSettle();
       expect(service.filtros, {'mascoteroId': 'mascotero-1'});
+      await tapVisible(tester, find.text('Filtros'));
       expect(find.text('Solo mis publicaciones'), findsNothing);
-      await tapVisible(tester, find.widgetWithText(FilledButton, 'Buscar'));
+      await tapVisible(
+        tester,
+        find.widgetWithText(FilledButton, 'Aplicar filtros'),
+      );
       expect(service.filtros, {'mascoteroId': 'mascotero-1'});
       await auth.logout();
       await tester.pumpAndSettle();
-      expect(find.text('Toby · Perdida'), findsNothing);
+      expect(find.text('Toby'), findsNothing);
       expect(find.text('Ingresá para continuar.'), findsOneWidget);
     },
   );
@@ -76,22 +80,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tapVisible(
-      tester,
-      find.widgetWithText(
-        DropdownButtonFormField<int>,
-        '¿Qué avisos querés ver?',
-      ),
-    );
-    await tester.tap(find.text('Personas que quieren adoptar').last);
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Buscan adoptar'));
     expect(
       find.text(
         'Personas que buscan adoptar. Mirá estos avisos si tenés un animal para dar en adopción.',
       ),
       findsOneWidget,
     );
-    await tapVisible(tester, find.widgetWithText(FilledButton, 'Buscar'));
     expect(service.filtros['tipoPublicacion'], '4');
   });
   for (final tipo in ['Doy en adopción', 'Busco adoptar']) {
@@ -175,7 +170,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tapVisible(tester, find.text('Toby · Perdida'));
+      expect(find.text('Perdida'), findsOneWidget); // Etiqueta del tipo.
+      expect(find.textContaining('Se perdió '), findsOneWidget);
+      await tapVisible(tester, find.text('Toby'));
       expect(find.text('2215550000'), findsOneWidget);
       expect(find.text('Marcar como resuelta'), findsNothing);
     },

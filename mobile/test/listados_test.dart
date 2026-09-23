@@ -8,11 +8,19 @@ import 'package:huella_cerca/core/network/api_exception.dart';
 import 'package:huella_cerca/pages/mascotas_page.dart';
 import 'package:huella_cerca/pages/recomendar_servicio_page.dart';
 import 'package:huella_cerca/models/auth_dto.dart';
+import 'package:huella_cerca/models/publicacion_dto.dart';
 
 import 'support/comunidad_mocks.dart';
 import 'support/service_mocks.dart';
 
 void main() {
+  test('Fecha relativa compara solo el día', () {
+    final ahora = DateTime(2026, 9, 22, 23, 50);
+    expect(fechaRelativa(DateTime(2026, 9, 22), ahora: ahora), 'hoy');
+    expect(fechaRelativa(DateTime(2026, 9, 21, 23), ahora: ahora), 'ayer');
+    expect(fechaRelativa(DateTime(2026, 9, 15), ahora: ahora), 'hace 7 días');
+    expect(fechaRelativa(DateTime(2026, 8, 1), ahora: ahora), 'el 1/8/2026');
+  });
   testWidgets('Resultados: carga, error, reintento y vacío', (tester) async {
     final initial = Completer<PaginaDto<String>>();
     int calls = 0;
@@ -100,7 +108,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Toby · Perdida'));
+      await tester.ensureVisible(find.text('Toby'));
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('Filtros'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Filtros'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Aplicar filtros'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(

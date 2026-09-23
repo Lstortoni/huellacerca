@@ -14,9 +14,13 @@ class CampoUbicacion extends StatefulWidget {
     required this.onChanged,
     this.obligatorio = false,
     this.enabled = true,
+    this.onDescripcion,
   });
   final UbicacionService service;
   final void Function(String? provinciaId, String? localidadId) onChanged;
+
+  /// Nombre visible de la selección (localidad o provincia), o null si no hay.
+  final ValueChanged<String?>? onDescripcion;
   final bool obligatorio, enabled;
   @override
   State<CampoUbicacion> createState() => _CampoUbicacionState();
@@ -25,6 +29,7 @@ class CampoUbicacion extends StatefulWidget {
 class _CampoUbicacionState extends State<CampoUbicacion> {
   late Future<List<ProvinciaDto>> _future;
   String? _provincia;
+  String? _nombreProvincia;
   LocalidadDto? _localidad;
   final _field = GlobalKey<FormFieldState<LocalidadDto>>();
   @override
@@ -72,10 +77,15 @@ class _CampoUbicacionState extends State<CampoUbicacion> {
                 : (value) {
                     setState(() {
                       _provincia = value == '' ? null : value;
+                      _nombreProvincia = snapshot.data!
+                          .where((p) => p.id == _provincia)
+                          .firstOrNull
+                          ?.nombre;
                       _localidad = null;
                     });
                     _field.currentState?.didChange(null);
                     widget.onChanged(_provincia, null);
+                    widget.onDescripcion?.call(_nombreProvincia);
                   },
           );
         },
@@ -113,6 +123,7 @@ class _CampoUbicacionState extends State<CampoUbicacion> {
                           setState(() => _localidad = selected);
                           field.didChange(selected);
                           widget.onChanged(_provincia, selected.id);
+                          widget.onDescripcion?.call(selected.nombre);
                         },
                 ),
                 if (!widget.obligatorio && _localidad != null)
@@ -123,6 +134,7 @@ class _CampoUbicacionState extends State<CampoUbicacion> {
                             setState(() => _localidad = null);
                             field.didChange(null);
                             widget.onChanged(_provincia, null);
+                            widget.onDescripcion?.call(_nombreProvincia);
                           },
                     child: const Text('Todas las localidades'),
                   ),

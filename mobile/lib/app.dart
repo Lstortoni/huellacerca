@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/di/service_registration.dart';
+import 'core/theme/colores_app.dart';
 import 'services/contracts/auth_service.dart';
 import 'services/contracts/ubicacion_service.dart';
 import 'pages/inicio_page.dart';
@@ -35,8 +36,19 @@ class _HuellaCercaAppState extends State<HuellaCercaApp> {
     title: 'Huella Cerca',
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF246653)),
-      scaffoldBackgroundColor: const Color(0xFFF6F5F0),
+      colorScheme: ColorScheme.fromSeed(seedColor: ColoresApp.verde),
+      scaffoldBackgroundColor: ColoresApp.fondo,
+      // Barra integrada al fondo, sin el tinte gris al desplazar.
+      appBarTheme: const AppBarTheme(
+        backgroundColor: ColoresApp.fondo,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        titleTextStyle: TextStyle(
+          color: ColoresApp.verde,
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
       useMaterial3: true,
     ),
     home: InicioPage(auth: getIt<AuthService>()),

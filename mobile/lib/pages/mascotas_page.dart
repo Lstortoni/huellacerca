@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../widgets/foto_publicacion.dart';
-
+import '../core/theme/colores_aviso.dart';
 import '../models/publicacion_dto.dart';
 import '../services/contracts/auth_service.dart';
 import '../services/contracts/publicacion_service.dart';
@@ -10,8 +9,11 @@ import '../widgets/barra_superior.dart';
 import '../widgets/campo_ubicacion.dart';
 import '../widgets/contenido_formulario.dart';
 import '../widgets/lista_paginada.dart';
+import '../widgets/tarjeta_publicacion.dart';
 import 'publicacion_detalle_page.dart';
 
+/// Búsqueda de avisos. Tipo y especie se aplican al tocarlos; el resto de los
+/// filtros está en un panel que se aplica al cerrarlo.
 class MascotasPage extends StatefulWidget {
   const MascotasPage({
     super.key,
@@ -31,39 +33,27 @@ class MascotasPage extends StatefulWidget {
 class _MascotasPageState extends State<MascotasPage> {
   final _zona = TextEditingController();
   int? _tipo, _mascota;
-  int? _estado = 1;
-  String? _provincia, _localidad;
+  late final int? _estadoInicial = widget.soloMias ? null : 1;
+  late int? _estado = _estadoInicial;
+  String? _provincia, _localidad, _lugar;
+  int _revisionUbicacion = 0;
   DateTime? _desde, _hasta;
-  bool _mias = false;
+  late bool _mias = widget.soloMias;
   String? _error;
   int _revision = 0;
-  Map<String, String> _filtros = {'estado': '1'};
+  bool _panelAbierto = false;
+  late Map<String, String> _filtros = widget.soloMias
+      ? {'mascoteroId': widget.auth.usuario!.mascotero.id}
+      : {'estado': '1'};
   Future<List<CaracteristicaMascotaDto>>? _opciones;
   final Map<String, int> _caracteristicas = {};
-  int _revisionCaracteristicas = 0;
+  final Map<String, String> _nombresCaracteristicas = {};
 
   void _cambiarMascota(int? tipo) {
     _mascota = tipo;
     _caracteristicas.clear();
-    _revisionCaracteristicas++;
-    _cargarOpciones();
-  }
-
-  void _cargarOpciones() {
-    _opciones = _mascota == null
-        ? null
-        : widget.service.caracteristicas(_mascota!);
+    _opciones = tipo == null ? null : widget.service.caracteristicas(tipo);
     _opciones?.ignore();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.soloMias) {
-      _mias = true;
-      _estado = null;
-      _filtros = {'mascoteroId': widget.auth.usuario!.mascotero.id};
-    }
   }
 
   @override
@@ -74,13 +64,15 @@ class _MascotasPageState extends State<MascotasPage> {
 
   void _buscar() {
     if (_desde != null && _hasta != null && _desde!.isAfter(_hasta!)) {
-      setState(
-        () => _error = 'La fecha desde no puede superar la fecha hasta.',
-      );
+      setState(() {
+        _error = 'La fecha desde no puede superar la fecha hasta.';
+        _panelAbierto = true;
+      });
       return;
     }
     setState(() {
       _error = null;
+      _panelAbierto = false;
       _filtros = {
         for (final c in _caracteristicas.entries) c.key: '${c.value}',
         if (_tipo != null) 'tipoPublicacion': '$_tipo',
@@ -98,24 +90,46 @@ class _MascotasPageState extends State<MascotasPage> {
     });
   }
 
-  Widget _selector(
-    String label,
-    Map<int, String> values,
-    int? value,
-    ValueChanged<int?> changed,
-  ) => DropdownButtonFormField<int>(
-    isExpanded: true,
-    itemHeight: null,
-    initialValue: value,
-    decoration: InputDecoration(labelText: label),
-    items: [
-      const DropdownMenuItem(value: 0, child: Text('Todas')),
-      ...values.entries.map(
-        (x) => DropdownMenuItem(value: x.key, child: Text(x.value)),
+  void _quitarUbicacion() {
+    _provincia = _localidad = _lugar = null;
+    _revisionUbicacion++;
+  }
+
+  void _limpiarPanel() => setState(() {
+    _estado = _estadoInicial;
+    _quitarUbicacion();
+    _zona.clear();
+    _desde = _hasta = null;
+    _caracteristicas.clear();
+    _mias = widget.soloMias;
+    _error = null;
+  });
+
+  /// Filtros del panel que difieren del valor inicial, con su acción para quitarlos.
+  List<(String, VoidCallback)> get _activos => [
+    if (_estado != _estadoInicial)
+      (
+        switch (_estado) {
+          1 => 'Activas',
+          2 => 'Resueltas',
+          _ => 'Activas y resueltas',
+        },
+        () => _estado = _estadoInicial,
       ),
-    ],
-    onChanged: (v) => setState(() => changed(v == 0 ? null : v)),
-  );
+    if (_provincia != null) (_lugar ?? 'Ubicación', _quitarUbicacion),
+    if (_zona.text.trim().isNotEmpty)
+      ('Zona: ${_zona.text.trim()}', _zona.clear),
+    if (_desde != null) ('Desde ${fechaVisible(_desde!)}', () => _desde = null),
+    if (_hasta != null) ('Hasta ${fechaVisible(_hasta!)}', () => _hasta = null),
+    for (final campo in _caracteristicas.keys.toList())
+      (
+        _nombresCaracteristicas[campo] ?? campo,
+        () => _caracteristicas.remove(campo),
+      ),
+    if (_mias && !widget.soloMias)
+      ('Solo mis publicaciones', () => _mias = false),
+  ];
+
   Future<void> _fecha(bool desde) async {
     final value = await showDatePicker(
       context: context,
@@ -134,170 +148,399 @@ class _MascotasPageState extends State<MascotasPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: BarraSuperior(
-      auth: widget.auth,
-      titulo: widget.soloMias ? 'Mis publicaciones' : 'Buscar mascotas',
+  Widget _chip({
+    required String texto,
+    required bool seleccionado,
+    required VoidCallback onTap,
+    EstiloAviso? estilo,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return ChoiceChip(
+      label: Text(texto),
+      avatar: estilo == null
+          ? null
+          : Icon(estilo.icono, size: 18, color: estilo.color),
+      selected: seleccionado,
+      showCheckmark: estilo == null,
+      selectedColor: estilo?.fondo,
+      side: BorderSide(
+        color: seleccionado
+            ? (estilo?.color ?? scheme.primary)
+            : scheme.outlineVariant,
+      ),
+      onSelected: (_) => onTap(),
+    );
+  }
+
+  Widget _titulo(String texto) => Padding(
+    padding: const EdgeInsets.only(top: 16, bottom: 8),
+    child: Text(
+      texto,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     ),
-    body: ContenidoFormulario(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (widget.soloMias)
-            const Text(
-              'Tus avisos de mascotas, incluidos los activos y los resueltos.',
+  );
+
+  /// Grilla 2×2 de tipos, todos del mismo ancho. Sin selección se ven todos;
+  /// tocar el tipo elegido lo quita.
+  Widget _filaTipos() {
+    final tipos = tiposPublicacionBusqueda.entries.toList();
+    return Column(
+      spacing: 8,
+      children: [
+        for (var i = 0; i < tipos.length; i += 2)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 8,
+              children: [
+                for (final t in tipos.skip(i).take(2))
+                  Expanded(child: _opcionTipo(t.key, t.value)),
+              ],
             ),
-          _selector(
-            '¿Qué avisos querés ver?',
-            tiposPublicacionBusqueda,
-            _tipo,
-            (v) => _tipo = v,
           ),
-          if (_tipo != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(explicacionesPublicacion[_tipo]!),
+      ],
+    );
+  }
+
+  Widget _opcionTipo(int tipo, String texto) {
+    final theme = Theme.of(context);
+    final estilo = ColoresAviso.tipo(tipo);
+    final seleccionado = _tipo == tipo;
+    return Material(
+      color: seleccionado ? estilo.fondo : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: seleccionado ? estilo.color : theme.colorScheme.outlineVariant,
+          width: seleccionado ? 1.5 : 1,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Semantics(
+        button: true,
+        selected: seleccionado,
+        child: InkWell(
+          onTap: () {
+            _tipo = seleccionado ? null : tipo;
+            _buscar();
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(estilo.icono, size: 20, color: estilo.color),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    texto,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: seleccionado
+                          ? FontWeight.bold
+                          : FontWeight.w500,
+                      color: seleccionado ? estilo.color : null,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          _selector('Tipo de mascota', tiposMascota, _mascota, _cambiarMascota),
-          if (_mascota == null)
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Especie como selector segmentado; admite quedar sin selección (todas).
+  Widget _selectorMascota() => SegmentedButton<int>(
+    emptySelectionAllowed: true,
+    showSelectedIcon: false,
+    segments: [
+      for (final m in tiposMascota.entries)
+        ButtonSegment(
+          value: m.key,
+          icon: Text(
+            iconosMascota[m.key]!,
+            style: const TextStyle(fontSize: 18),
+          ),
+          label: Text(m.value),
+        ),
+    ],
+    selected: {?_mascota},
+    onSelectionChanged: (s) {
+      _cambiarMascota(s.firstOrNull);
+      _buscar();
+    },
+  );
+
+  Widget _botonFiltros() {
+    final cantidad = _activos.length;
+    return FilledButton.tonalIcon(
+      onPressed: _panelAbierto
+          ? _buscar
+          : () => setState(() => _panelAbierto = true),
+      icon: Badge(
+        isLabelVisible: cantidad > 0,
+        label: Text('$cantidad'),
+        child: Icon(
+          _panelAbierto ? Icons.expand_less_rounded : Icons.tune_rounded,
+        ),
+      ),
+      label: const Text('Filtros'),
+    );
+  }
+
+  Widget _caracteristicasPanel() {
+    if (_mascota == null) {
+      return const Text(
+        'Elegí Perro, Gato u Otro para filtrar por sus características.',
+      );
+    }
+    return FutureBuilder<List<CaracteristicaMascotaDto>>(
+      future: _opciones,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const LinearProgressIndicator();
+        }
+        if (snapshot.hasError) {
+          return TextButton(
+            onPressed: () => setState(() => _cambiarMascota(_mascota)),
+            child: const Text('No pudimos cargar los filtros. Reintentar'),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             const Text(
-              'Elegí un tipo de mascota para filtrar por sus características.',
-            )
-          else
-            FutureBuilder<List<CaracteristicaMascotaDto>>(
-              future: _opciones,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const LinearProgressIndicator();
-                }
-                if (snapshot.hasError) {
-                  return TextButton(
-                    onPressed: () => setState(_cargarOpciones),
-                    child: const Text(
-                      'No pudimos cargar los filtros. Reintentar',
+              'Cada filtro busca el valor exacto; los avisos sin ese dato quedan fuera.',
+            ),
+            for (final campo in snapshot.data!) ...[
+              const SizedBox(height: 10),
+              Text(campo.nombre),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final o in campo.opciones)
+                    _chip(
+                      texto: o.nombre,
+                      seleccionado: _caracteristicas[campo.campo] == o.id,
+                      onTap: () => setState(() {
+                        if (_caracteristicas[campo.campo] == o.id) {
+                          _caracteristicas.remove(campo.campo);
+                        } else {
+                          _caracteristicas[campo.campo] = o.id;
+                          _nombresCaracteristicas[campo.campo] = o.nombre;
+                        }
+                      }),
                     ),
-                  );
-                }
-                return Column(
+                ],
+              ),
+            ],
+            if (_caracteristicas.isNotEmpty)
+              TextButton(
+                onPressed: () => setState(_caracteristicas.clear),
+                child: const Text('Quitar filtros de características'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _panel() {
+    final theme = Theme.of(context);
+    // Material (no Container) para que SwitchListTile pinte sobre este fondo.
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Material(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: _contenidoPanel(theme),
+        ),
+      ),
+    );
+  }
+
+  Widget _contenidoPanel(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _titulo('Estado'),
+        Wrap(
+          spacing: 6,
+          children: [
+            for (final (valor, texto) in [
+              (1, 'Activas'),
+              (2, 'Resueltas'),
+              (null, 'Todas'),
+            ])
+              _chip(
+                texto: texto,
+                seleccionado: _estado == valor,
+                onTap: () => setState(() => _estado = valor),
+              ),
+          ],
+        ),
+        _titulo('Ubicación'),
+        CampoUbicacion(
+          key: ValueKey(_revisionUbicacion),
+          service: widget.ubicacion,
+          onChanged: (p, l) {
+            _provincia = p;
+            _localidad = l;
+          },
+          onDescripcion: (d) => _lugar = d,
+        ),
+        TextField(
+          controller: _zona,
+          maxLength: 250,
+          decoration: const InputDecoration(labelText: 'Zona', counterText: ''),
+        ),
+        _titulo('Características'),
+        _caracteristicasPanel(),
+        _titulo('Fechas'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => _fecha(true),
+              icon: const Icon(Icons.event_rounded),
+              label: Text(
+                _desde == null ? 'Desde' : 'Desde: ${fechaVisible(_desde!)}',
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _fecha(false),
+              icon: const Icon(Icons.event_rounded),
+              label: Text(
+                _hasta == null ? 'Hasta' : 'Hasta: ${fechaVisible(_hasta!)}',
+              ),
+            ),
+            if (_desde != null || _hasta != null)
+              TextButton(
+                onPressed: () => setState(() => _desde = _hasta = null),
+                child: const Text('Quitar fechas'),
+              ),
+          ],
+        ),
+        if (!widget.soloMias)
+          ListenableBuilder(
+            listenable: widget.auth,
+            builder: (_, _) => widget.auth.autenticado
+                ? SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Solo mis publicaciones'),
+                    value: _mias,
+                    onChanged: (v) => setState(() => _mias = v),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              _error!,
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+          ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            TextButton(onPressed: _limpiarPanel, child: const Text('Limpiar')),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton(
+                onPressed: _buscar,
+                child: const Text('Aplicar filtros'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final activos = _activos;
+    return Scaffold(
+      appBar: BarraSuperior(
+        auth: widget.auth,
+        titulo: widget.soloMias ? 'Mis publicaciones' : 'Buscar mascotas',
+      ),
+      body: ContenidoFormulario(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.soloMias)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Tus avisos de mascotas, incluidos los activos y los resueltos.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            _filaTipos(),
+            if (_tipo != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  explicacionesPublicacion[_tipo]!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 10),
+            _selectorMascota(),
+            const SizedBox(height: 10),
+            _botonFiltros(),
+            // Con el panel cerrado se ven los filtros aplicados para quitarlos.
+            if (!_panelAbierto && activos.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
-                    const Text(
-                      'Características (opcionales). Cada filtro busca el valor exacto; los avisos sin ese dato quedan fuera.',
-                    ),
-                    for (final campo in snapshot.data!)
-                      DropdownButtonFormField<int>(
-                        key: ValueKey(
-                          '$_revisionCaracteristicas:${campo.campo}',
-                        ),
-                        initialValue: _caracteristicas[campo.campo] ?? 0,
-                        isExpanded: true,
-                        decoration: InputDecoration(labelText: campo.nombre),
-                        items: [
-                          const DropdownMenuItem(
-                            value: 0,
-                            child: Text('Cualquiera'),
-                          ),
-                          ...campo.opciones.map(
-                            (o) => DropdownMenuItem(
-                              value: o.id,
-                              child: Text(o.nombre),
-                            ),
-                          ),
-                        ],
-                        onChanged: (v) => setState(() {
-                          if (v == null || v == 0) {
-                            _caracteristicas.remove(campo.campo);
-                          } else {
-                            _caracteristicas[campo.campo] = v;
-                          }
-                        }),
-                      ),
-                    if (_caracteristicas.isNotEmpty)
-                      TextButton(
-                        onPressed: () => setState(() {
-                          _caracteristicas.clear();
-                          _revisionCaracteristicas++;
-                        }),
-                        child: const Text('Quitar filtros de características'),
+                    for (final (texto, quitar) in activos)
+                      InputChip(
+                        label: Text(texto),
+                        onDeleted: () {
+                          setState(quitar);
+                          _buscar();
+                        },
+                        deleteButtonTooltipMessage: 'Quitar filtro',
                       ),
                   ],
-                );
-              },
-            ),
-          _selector('Estado', estadosPublicacion, _estado, (v) => _estado = v),
-          CampoUbicacion(
-            service: widget.ubicacion,
-            onChanged: (p, l) {
-              _provincia = p;
-              _localidad = l;
-            },
-          ),
-          TextField(
-            controller: _zona,
-            maxLength: 250,
-            decoration: const InputDecoration(labelText: 'Zona'),
-          ),
-          Wrap(
-            spacing: 8,
-            children: [
-              TextButton(
-                onPressed: () => _fecha(true),
-                child: Text(
-                  _desde == null
-                      ? 'Fecha desde'
-                      : 'Desde: ${fechaVisible(_desde!)}',
                 ),
               ),
-              TextButton(
-                onPressed: () => _fecha(false),
-                child: Text(
-                  _hasta == null
-                      ? 'Fecha hasta'
-                      : 'Hasta: ${fechaVisible(_hasta!)}',
-                ),
-              ),
-              if (_desde != null || _hasta != null)
-                TextButton(
-                  onPressed: () => setState(() {
-                    _desde = null;
-                    _hasta = null;
-                  }),
-                  child: const Text('Quitar fechas'),
-                ),
-            ],
-          ),
-          if (!widget.soloMias)
-            ListenableBuilder(
-              listenable: widget.auth,
-              builder: (_, _) => widget.auth.autenticado
-                  ? CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Solo mis publicaciones'),
-                      value: _mias,
-                      onChanged: (v) => setState(() => _mias = v!),
-                    )
-                  : const SizedBox.shrink(),
+            Visibility(
+              visible: _panelAbierto,
+              maintainState: true,
+              child: _panel(),
             ),
-          if (_error != null) Text(_error!),
-          FilledButton(onPressed: _buscar, child: const Text('Buscar')),
-          const SizedBox(height: 20),
-          ListaPaginada<PublicacionDto>(
-            key: ValueKey(_revision),
-            cargar: (pagina) =>
-                widget.service.buscar(filtros: _filtros, pagina: pagina),
-            itemBuilder: (p, recargar) => Card(
-              child: ListTile(
-                leading: MiniaturaPublicacion(
-                  publicacion: p,
-                  service: widget.service,
-                ),
-                title: Text(
-                  '${p.titulo} · ${etiquetasPublicacion[p.tipoPublicacion]}',
-                ),
-                subtitle: Text(
-                  '${p.localidad}, ${p.provincia}\n${fechaVisible(p.fechaReferencia)} · ${estadosPublicacion[p.estado]}',
-                ),
-                isThreeLine: true,
+            const SizedBox(height: 16),
+            ListaPaginada<PublicacionDto>(
+              key: ValueKey(_revision),
+              cargar: (pagina) =>
+                  widget.service.buscar(filtros: _filtros, pagina: pagina),
+              itemBuilder: (p, recargar) => TarjetaPublicacion(
+                publicacion: p,
+                service: widget.service,
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -312,9 +555,9 @@ class _MascotasPageState extends State<MascotasPage> {
                 },
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

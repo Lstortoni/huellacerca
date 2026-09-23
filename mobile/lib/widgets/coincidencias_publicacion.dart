@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'foto_publicacion.dart';
+import 'tarjeta_publicacion.dart';
 
 import '../models/pagina_dto.dart';
 import '../models/publicacion_dto.dart';
@@ -124,21 +124,11 @@ class _CoincidenciasPublicacionState extends State<CoincidenciasPublicacion> {
                       : 'No hay más resultados en esta página.',
                 ),
               for (final candidato in resultado.items)
-                Card(
-                  child: ListTile(
-                    leading: MiniaturaPublicacion(
-                      publicacion: candidato.publicacion,
-                      service: widget.service,
-                    ),
-                    title: Text(candidato.publicacion.titulo),
-                    subtitle: Text(
-                      '${etiquetasPublicacion[candidato.publicacion.tipoPublicacion]} · ${candidato.publicacion.localidad}\n'
-                      '${fechaVisible(candidato.publicacion.fechaReferencia)}\n'
-                      'Coincide en: ${candidato.coincideEn.join(', ')}',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _abrir(candidato.publicacion.id),
-                  ),
+                TarjetaPublicacion(
+                  publicacion: candidato.publicacion,
+                  service: widget.service,
+                  detalle: 'Coincide en: ${candidato.coincideEn.join(', ')}',
+                  onTap: () => _abrir(candidato.publicacion.id),
                 ),
               if (!widget.paginada && resultado.haySiguiente)
                 TextButton(

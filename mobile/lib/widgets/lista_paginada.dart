@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/pagina_dto.dart';
 import 'contenido_formulario.dart';
+import 'estado_mensaje.dart';
 
 /// Muestra carga, errores, vacío y navegación sin conocer el servicio concreto.
 class ListaPaginada<T> extends StatefulWidget {
@@ -44,25 +45,31 @@ class _ListaPaginadaState<T> extends State<ListaPaginada<T>> {
         );
       }
       if (snapshot.hasError) {
-        return Column(
-          children: [
-            Text(mensajeError(snapshot.error!)),
-            TextButton(
-              onPressed: () => _cargar(_pagina),
-              child: const Text('Reintentar'),
-            ),
-          ],
+        return EstadoMensaje(
+          icono: Icons.cloud_off_rounded,
+          mensaje: mensajeError(snapshot.error!),
+          accion: 'Reintentar',
+          onAccion: () => _cargar(_pagina),
         );
       }
       final page = snapshot.data!;
+      final theme = Theme.of(context);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('${page.total} resultados'),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              page.total == 1 ? '1 resultado' : '${page.total} resultados',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
           if (page.items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Text('No encontramos resultados con esos filtros.'),
+            const EstadoMensaje(
+              icono: Icons.search_off_rounded,
+              mensaje: 'No encontramos resultados con esos filtros.',
             ),
           ...page.items.map(
             (item) => widget.itemBuilder(item, () => _cargar(_pagina)),

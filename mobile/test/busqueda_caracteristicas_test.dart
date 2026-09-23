@@ -7,7 +7,6 @@ import 'package:huella_cerca/pages/publicacion_detalle_page.dart';
 import 'support/comunidad_mocks.dart';
 import 'support/service_mocks.dart';
 import 'comunidad_pages_test.dart' show tapVisible;
-import 'publicar_caracteristicas_test.dart' show elegir;
 
 class DetalleConCaracteristicas extends PublicacionServiceMock {
   int tipo = 3;
@@ -88,27 +87,33 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await elegir(tester, 'Tipo de mascota', 'Perro');
-      await elegir(tester, 'Tamaño', 'Mediano');
-      await elegir(tester, 'Raza', 'Mestizo');
-      await tapVisible(tester, find.widgetWithText(FilledButton, 'Buscar'));
+      final aplicar = find.widgetWithText(FilledButton, 'Aplicar filtros');
+      await tapVisible(tester, find.text('Perro'));
+      expect(service.filtros, {'estado': '1', 'tipoMascota': '1'});
+      await tapVisible(tester, find.text('Filtros'));
+      await tapVisible(tester, find.text('Mediano'));
+      await tapVisible(tester, find.text('Mestizo'));
+      await tapVisible(tester, aplicar);
       expect(service.filtros, {
         'estado': '1',
         'tipoMascota': '1',
         'tamano': '2',
         'raza': '2',
       });
+      // Los filtros aplicados se ven como chips que se pueden quitar.
+      expect(find.widgetWithText(InputChip, 'Mediano'), findsOneWidget);
+      await tapVisible(tester, find.text('Filtros'));
       await tapVisible(tester, find.text('Quitar filtros de características'));
-      await tapVisible(tester, find.widgetWithText(FilledButton, 'Buscar'));
+      await tapVisible(tester, aplicar);
       expect(service.filtros, {'estado': '1', 'tipoMascota': '1'});
-      await elegir(tester, 'Raza', 'De raza');
-      await elegir(tester, 'Tipo de mascota', 'Otro');
+      await tapVisible(tester, find.text('Filtros'));
+      await tapVisible(tester, find.text('De raza'));
+      await tapVisible(tester, find.text('Otro'));
       expect(find.text('Raza'), findsNothing);
-      await tapVisible(tester, find.widgetWithText(FilledButton, 'Buscar'));
       expect(service.filtros, {'estado': '1', 'tipoMascota': '3'});
-      await elegir(tester, 'Tamaño', 'Chico');
-      await elegir(tester, 'Tipo de mascota', 'Todas');
-      await tapVisible(tester, find.widgetWithText(FilledButton, 'Buscar'));
+      await tapVisible(tester, find.text('Filtros'));
+      await tapVisible(tester, find.text('Chico'));
+      await tapVisible(tester, find.text('Otro'));
       expect(service.filtros, {'estado': '1'});
     },
   );

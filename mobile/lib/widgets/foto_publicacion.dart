@@ -10,26 +10,36 @@ class MiniaturaPublicacion extends StatelessWidget {
     super.key,
     required this.publicacion,
     required this.service,
+    this.lado = 56,
   });
   final PublicacionDto publicacion;
   final PublicacionService service;
+  final double lado;
+
+  /// Sin foto (o si falla la carga) ocupa el mismo lugar con una huella.
+  Widget _sinFoto(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: lado,
+      height: lado,
+      color: scheme.primaryContainer.withValues(alpha: 0.6),
+      child: Icon(Icons.pets_rounded, size: lado * 0.45, color: scheme.primary),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) => publicacion.fotoUrl == null
-      ? const Icon(Icons.pets_outlined)
-      : ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(lado / 6),
+    child: publicacion.fotoUrl == null
+        ? _sinFoto(context)
+        : Image.network(
             service.urlFoto(publicacion.fotoUrl!),
-            width: 56,
-            height: 56,
+            width: lado,
+            height: lado,
             fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => const SizedBox(
-              width: 56,
-              height: 56,
-              child: Icon(Icons.pets_outlined),
-            ),
+            errorBuilder: (context, _, _) => _sinFoto(context),
           ),
-        );
+  );
 }
 
 /// Mantiene el archivo pendiente para poder reintentar sin volver a crear el aviso.

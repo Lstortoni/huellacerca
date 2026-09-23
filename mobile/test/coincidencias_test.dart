@@ -78,10 +78,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Posibles coincidencias'), findsOneWidget);
-      expect(
-        find.textContaining('Ya no se consultan'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Ya no se consultan'), findsOneWidget);
       expect(service.llamadas, 0);
     });
   }

@@ -19,6 +19,12 @@ class DetalleConCaracteristicas extends PublicacionServiceMock {
   });
 }
 
+/// Valor informado de una característica en el detalle del aviso.
+Finder dato(String etiqueta, String valor) => find.descendant(
+  of: find.byKey(ValueKey('caracteristica:$etiqueta')),
+  matching: find.text(valor),
+);
+
 void main() {
   for (final tipo in [1, 2, 3, 4]) {
     testWidgets(
@@ -37,9 +43,12 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Tamaño: Mediano'), findsOneWidget);
-        expect(find.text('Raza: Mestizo'), findsOneWidget);
-        expect(find.textContaining('Pelaje:'), findsNothing);
+        expect(dato('Tamaño', 'Mediano'), findsOneWidget);
+        expect(dato('Raza', 'Mestizo'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('caracteristica:Pelaje')),
+          findsNothing,
+        );
         expect(
           find.text(
             tipo == 4
@@ -69,7 +78,7 @@ void main() {
       tester,
       find.text('No pudimos cargar las características. Reintentar'),
     );
-    expect(find.text('Tamaño: Mediano'), findsOneWidget);
+    expect(dato('Tamaño', 'Mediano'), findsOneWidget);
   });
   testWidgets(
     'Buscar envía filtros; quitar y cambiar animal no conserva filtros invisibles',

@@ -125,7 +125,7 @@ void main() {
       await tapVisible(tester, find.text('Elegir foto'));
       await elegir(tester, '¿Qué querés publicar?', 'Doy en adopción');
       await completar(tester);
-      await tapVisible(tester, find.text('Publicar'));
+      await tapVisible(tester, find.text('Publicar aviso'));
       expect(service.creaciones, 1);
       expect(service.subidas, 1);
       expect(find.text('R2 no disponible'), findsOneWidget);

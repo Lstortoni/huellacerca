@@ -3,7 +3,79 @@ import 'package:flutter/material.dart';
 import '../models/recomendacion_dto.dart';
 import '../services/contracts/auth_service.dart';
 import '../services/contracts/recomendacion_service.dart';
+import '../core/theme/colores_app.dart';
 import 'contenido_formulario.dart';
+import 'grilla.dart';
+
+/// Aspecto seleccionable (selección múltiple) con tilde al elegirlo.
+class _OpcionAspecto extends StatelessWidget {
+  const _OpcionAspecto({
+    required this.aspecto,
+    required this.elegido,
+    required this.onTap,
+  });
+  final AspectoDto aspecto;
+  final bool elegido;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Material(
+      color: elegido ? scheme.primaryContainer : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: elegido ? scheme.primary : scheme.outlineVariant,
+          width: elegido ? 1.5 : 1,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Semantics(
+        checked: elegido,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                Icon(
+                  elegido
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  size: 20,
+                  color: elegido ? scheme.primary : scheme.outline,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        aspecto.nombre,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: elegido
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                        ),
+                      ),
+                      if (!aspecto.activo)
+                        Text(
+                          'Aspecto retirado del catálogo',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// Comparte el estado de la recomendación en resultados y ficha del prestador.
 class GestionRecomendacion extends StatelessWidget {
@@ -171,11 +243,13 @@ class _MiRecomendacionState extends State<_MiRecomendacion> {
         ],
       );
     }
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_recomendacion == null)
-          FilledButton(
+          FilledButton.icon(
+            style: ColoresApp.accionPrincipal,
             onPressed: _ocupado
                 ? null
                 : () => _cambiar(
@@ -186,19 +260,47 @@ class _MiRecomendacionState extends State<_MiRecomendacion> {
                     ),
                     'Tu recomendación ya está guardada. Los aspectos son opcionales.',
                   ),
-            child: Text(_ocupado ? 'Guardando…' : 'Recomendar'),
+            icon: const Icon(Icons.thumb_up_rounded),
+            label: Text(_ocupado ? 'Guardando…' : 'Recomendar'),
           )
         else ...[
-          const Text('Ya lo recomendás'),
+          Row(
+            children: [
+              const Icon(
+                Icons.check_circle_rounded,
+                color: ColoresApp.verde,
+                size: 20,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Ya lo recomendás',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: ColoresApp.verde,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
           if (widget.compacto)
-            TextButton(
-              onPressed: _ocupado ? null : widget.onEditar,
-              child: const Text('Modificar aspectos'),
-            )
-          else ...[
-            const Text(
-              'Podés destacar aspectos positivos (opcional). Tu recomendación cuenta aunque no elijas ninguno.',
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _ocupado ? null : widget.onEditar,
+                icon: const Icon(Icons.edit_rounded, size: 18),
+                label: const Text('Modificar aspectos'),
+              ),
             ),
+          if (!widget.compacto) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Podés destacar aspectos positivos (opcional). Tu recomendación cuenta aunque no elijas ninguno.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 10),
             FutureBuilder<List<AspectoDto>>(
               future: _catalogo,
               builder: (context, snapshot) {
@@ -219,25 +321,27 @@ class _MiRecomendacionState extends State<_MiRecomendacion> {
                   for (final a in _recomendacion!.aspectos) a.id: a,
                 };
                 return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    for (final a in opciones.values)
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(a.nombre),
-                        subtitle: a.activo
-                            ? null
-                            : const Text('Aspecto retirado del catálogo'),
-                        value: _seleccion.contains(a.id),
-                        onChanged: _ocupado
-                            ? null
-                            : (v) => setState(() {
-                                if (v == true) {
-                                  _seleccion.add(a.id);
-                                } else {
-                                  _seleccion.remove(a.id);
-                                }
-                              }),
-                      ),
+                    Grilla(
+                      columnas: 2,
+                      espacio: 6,
+                      children: [
+                        for (final a in opciones.values)
+                          _OpcionAspecto(
+                            aspecto: a,
+                            elegido: _seleccion.contains(a.id),
+                            onTap: _ocupado
+                                ? null
+                                : () => setState(() {
+                                    if (!_seleccion.remove(a.id)) {
+                                      _seleccion.add(a.id);
+                                    }
+                                  }),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     FilledButton(
                       onPressed: _ocupado
                           ? null
@@ -254,9 +358,13 @@ class _MiRecomendacionState extends State<_MiRecomendacion> {
                 );
               },
             ),
-            TextButton(
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.error,
+              ),
               onPressed: _ocupado ? null : _retirar,
-              child: const Text('Retirar recomendación'),
+              icon: const Icon(Icons.thumb_down_off_alt_rounded),
+              label: const Text('Retirar recomendación'),
             ),
           ],
         ],

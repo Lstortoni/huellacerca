@@ -6,6 +6,12 @@ import 'package:huella_cerca/models/pagina_dto.dart';
 import 'package:huella_cerca/widgets/lista_paginada.dart';
 import 'package:huella_cerca/core/network/api_exception.dart';
 import 'package:huella_cerca/pages/mascotas_page.dart';
+import 'package:huella_cerca/models/recomendacion_dto.dart';
+import 'package:huella_cerca/pages/perfil_page.dart';
+import 'package:huella_cerca/pages/prestador_detalle_page.dart';
+import 'package:huella_cerca/pages/publicacion_detalle_page.dart';
+import 'package:huella_cerca/pages/publicar_mascota_page.dart';
+import 'package:huella_cerca/pages/recomendaciones_page.dart';
 import 'package:huella_cerca/pages/recomendar_servicio_page.dart';
 import 'package:huella_cerca/models/auth_dto.dart';
 import 'package:huella_cerca/models/publicacion_dto.dart';
@@ -126,6 +132,72 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicarMascotaPage(
+            auth: auth,
+            service: PublicacionServiceMock(),
+            ubicacion: UbicacionServiceMock(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Color predominante'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Información de contacto'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      // Detalle visto por su autor: controles de foto y sección «Tu aviso».
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicacionDetallePage(
+            id: 'publicacion-1',
+            auth: auth,
+            service: PublicacionServiceMock(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Marcar como resuelta'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final servicios = RecomendacionServiceMock();
+      await servicios.crear(
+        const CrearRecomendacionRequest(prestadorServicioId: 'prestador-1'),
+      );
+      await servicios.guardarAspectos('recomendacion-1', ['a1', 'a2']);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RecomendacionesPage(
+            auth: auth,
+            service: servicios,
+            ubicacion: UbicacionServiceMock(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Veterinaria del barrio'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PrestadorDetallePage(
+            id: 'prestador-1',
+            auth: auth,
+            service: servicios,
+            permitirGestion: true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Guardar aspectos'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(MaterialApp(home: PerfilPage(auth: auth)));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Cerrar sesión'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     },

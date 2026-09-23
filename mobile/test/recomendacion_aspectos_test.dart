@@ -16,11 +16,18 @@ import 'support/auth_fakes.dart';
 import 'support/comunidad_mocks.dart';
 import 'support/service_mocks.dart';
 
+/// Fila del resumen de aspectos con su cantidad de votos.
+Finder aspecto(String nombre, int cantidad) => find.descendant(
+  of: find.byKey(ValueKey('aspecto:$nombre')),
+  matching: find.text('$cantidad'),
+);
+
 Future<void> tocar(WidgetTester tester, String texto) async {
   // Esperar el aviso temporal antes de tocar controles al pie de la pantalla.
   await tester.pump(const Duration(seconds: 5));
   await tester.pumpAndSettle();
-  final finder = find.text(texto);
+  // La gestión va antes que el resumen: el primero es el control editable.
+  final finder = find.text(texto).first;
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
   await tester.tap(finder);
@@ -55,14 +62,14 @@ void main() {
       await tocar(tester, 'Veterinaria del barrio');
       expect(find.byType(PrestadorDetallePage), findsOneWidget);
       expect(find.text('1 persona lo recomienda'), findsOneWidget);
-      expect(find.text('Buena atención: 1'), findsOneWidget);
+      expect(aspecto('Buena atención', 1), findsOneWidget);
       expect(find.text('Ana'), findsOneWidget);
       expect(find.text('Personas que lo recomiendan'), findsOneWidget);
       expect(find.text('Recomendar'), findsNothing);
       expect(find.text('Guardar aspectos'), findsNothing);
       expect(find.text('Retirar recomendación'), findsNothing);
       expect(find.text('Ingresá para recomendar'), findsNothing);
-      expect(find.byType(CheckboxListTile), findsNothing);
+      expect(find.text('Tu recomendación'), findsNothing);
       expect(service.consultasPropias, 0);
     });
   }
@@ -165,12 +172,12 @@ void main() {
       await tocar(tester, 'Buena atención');
       await tocar(tester, 'Guardar aspectos');
       expect(service.guardados, ['a1']);
-      expect(find.text('Buena atención: 1'), findsOneWidget);
+      expect(aspecto('Buena atención', 1), findsOneWidget);
       await tocar(tester, 'Buena atención');
       await tocar(tester, 'Guardar aspectos');
       expect(service.guardados, isEmpty);
       expect(find.text('1 persona lo recomienda'), findsOneWidget);
-      expect(find.text('Buena atención: 1'), findsNothing);
+      expect(aspecto('Buena atención', 1), findsNothing);
       await tocar(tester, 'Retirar recomendación');
       await tocar(tester, 'Retirar');
       expect(service.retiros, 1);

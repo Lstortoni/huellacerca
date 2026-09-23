@@ -9,6 +9,12 @@ class MascoteroDto {
   });
   final String id, nombre, apellido, localidadId;
   final String? telefono;
+
+  /// Iniciales para el avatar, por ejemplo "LS".
+  String get iniciales => [nombre, apellido]
+      .where((s) => s.trim().isNotEmpty)
+      .map((s) => s.trim()[0].toUpperCase())
+      .join();
   factory MascoteroDto.fromJson(Map<String, dynamic> j) => MascoteroDto(
     id: j['id'] as String,
     nombre: j['nombre'] as String,

@@ -121,11 +121,7 @@ class _Bienvenida extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final nombre = auth.usuario?.mascotero.nombre.trim() ?? '';
-    const botonPrincipal = ButtonStyle(
-      backgroundColor: WidgetStatePropertyAll(ColoresApp.ambarBoton),
-      foregroundColor: WidgetStatePropertyAll(ColoresApp.ambarTexto),
-      minimumSize: WidgetStatePropertyAll(Size(0, 52)),
-    );
+    const botonPrincipal = ColoresApp.accionPrincipal;
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),

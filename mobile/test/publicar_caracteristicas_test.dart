@@ -17,14 +17,16 @@ import 'support/comunidad_mocks.dart';
 import 'support/service_mocks.dart';
 import 'comunidad_pages_test.dart' show tapVisible, elegirLocalidad;
 
-Future<void> elegir(WidgetTester tester, String campo, String opcion) async {
-  await tapVisible(
-    tester,
-    find.widgetWithText(DropdownButtonFormField<int>, campo),
-  );
-  await tester.tap(find.text(opcion).last);
-  await tester.pumpAndSettle();
-}
+/// Toca [opcion] dentro del selector [campo] del formulario de publicación.
+/// Tocar la opción ya elegida la desmarca (queda "sin indicar").
+Future<void> elegir(WidgetTester tester, String campo, String opcion) =>
+    tapVisible(
+      tester,
+      find.descendant(
+        of: find.byKey(ValueKey('campo:$campo')),
+        matching: find.text(opcion),
+      ),
+    );
 
 Future<void> completar(WidgetTester tester) async {
   await tester.enterText(
@@ -135,11 +137,11 @@ void main() {
       }
       await completar(tester);
       if (tipo.key <= 2) {
-        await tapVisible(tester, find.text('Elegir fecha del suceso'));
+        await tapVisible(tester, find.text('Elegir fecha'));
         await tester.tap(find.text('OK'));
         await tester.pumpAndSettle();
       }
-      await tapVisible(tester, find.text('Publicar'));
+      await tapVisible(tester, find.text('Publicar aviso'));
       expect(service.creada!.tipoPublicacion, tipo.key);
       expect(service.creada!.tamano, 2);
       expect(service.creada!.raza, 2);
@@ -172,9 +174,9 @@ void main() {
     expect(find.text('Raza'), findsNothing);
     expect(find.text('Pelaje'), findsNothing);
     await elegir(tester, 'Tamaño', 'Chico');
-    await elegir(tester, 'Tamaño', 'Sin indicar');
+    await elegir(tester, 'Tamaño', 'Chico'); // Desmarcar = sin indicar.
     await completar(tester);
-    await tapVisible(tester, find.text('Publicar'));
+    await tapVisible(tester, find.text('Publicar aviso'));
     expect(service.creada!.tipoMascota, 3);
     for (final campo in [
       'tamano',
@@ -213,7 +215,7 @@ void main() {
       expect(find.text('Reintentar características'), findsOneWidget);
       await elegir(tester, '¿Qué querés publicar?', 'Busco adoptar');
       await completar(tester);
-      await tapVisible(tester, find.text('Publicar'));
+      await tapVisible(tester, find.text('Publicar aviso'));
       expect(service.creada!.tamano, isNull);
     },
   );
@@ -235,11 +237,14 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.tap(
-        find.widgetWithText(DropdownButtonFormField<int>, 'Tipo de mascota'),
+      // Mientras carga perro hay un indicador animado: no esperar a que se asiente.
+      final otro = find.descendant(
+        of: find.byKey(const ValueKey('campo:Tipo de mascota')),
+        matching: find.text('Otro'),
       );
-      await tester.pump(const Duration(seconds: 1));
-      await tester.tap(find.text('Otro').last);
+      await tester.ensureVisible(otro);
+      await tester.pump();
+      await tester.tap(otro);
       await tester.pumpAndSettle();
       service.perro.complete(
         caracteristicasJson(1).map(CaracteristicaMascotaDto.fromJson).toList(),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/colores_aviso.dart';
 import '../models/publicacion_dto.dart';
 import '../services/contracts/auth_service.dart';
 import '../services/contracts/publicacion_service.dart';
@@ -8,7 +7,10 @@ import '../services/contracts/ubicacion_service.dart';
 import '../widgets/barra_superior.dart';
 import '../widgets/campo_ubicacion.dart';
 import '../widgets/contenido_formulario.dart';
+import '../widgets/grilla.dart';
 import '../widgets/lista_paginada.dart';
+import '../widgets/opcion_tipo_aviso.dart';
+import '../widgets/selector_opciones.dart';
 import '../widgets/tarjeta_publicacion.dart';
 import 'publicacion_detalle_page.dart';
 
@@ -148,30 +150,6 @@ class _MascotasPageState extends State<MascotasPage> {
     }
   }
 
-  Widget _chip({
-    required String texto,
-    required bool seleccionado,
-    required VoidCallback onTap,
-    EstiloAviso? estilo,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return ChoiceChip(
-      label: Text(texto),
-      avatar: estilo == null
-          ? null
-          : Icon(estilo.icono, size: 18, color: estilo.color),
-      selected: seleccionado,
-      showCheckmark: estilo == null,
-      selectedColor: estilo?.fondo,
-      side: BorderSide(
-        color: seleccionado
-            ? (estilo?.color ?? scheme.primary)
-            : scheme.outlineVariant,
-      ),
-      onSelected: (_) => onTap(),
-    );
-  }
-
   Widget _titulo(String texto) => Padding(
     padding: const EdgeInsets.only(top: 16, bottom: 8),
     child: Text(
@@ -185,73 +163,21 @@ class _MascotasPageState extends State<MascotasPage> {
 
   /// Grilla 2×2 de tipos, todos del mismo ancho. Sin selección se ven todos;
   /// tocar el tipo elegido lo quita.
-  Widget _filaTipos() {
-    final tipos = tiposPublicacionBusqueda.entries.toList();
-    return Column(
-      spacing: 8,
-      children: [
-        for (var i = 0; i < tipos.length; i += 2)
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 8,
-              children: [
-                for (final t in tipos.skip(i).take(2))
-                  Expanded(child: _opcionTipo(t.key, t.value)),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _opcionTipo(int tipo, String texto) {
-    final theme = Theme.of(context);
-    final estilo = ColoresAviso.tipo(tipo);
-    final seleccionado = _tipo == tipo;
-    return Material(
-      color: seleccionado ? estilo.fondo : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: seleccionado ? estilo.color : theme.colorScheme.outlineVariant,
-          width: seleccionado ? 1.5 : 1,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Semantics(
-        button: true,
-        selected: seleccionado,
-        child: InkWell(
+  Widget _filaTipos() => Grilla(
+    columnas: 2,
+    children: [
+      for (final t in tiposPublicacionBusqueda.entries)
+        OpcionTipoAviso(
+          tipo: t.key,
+          texto: t.value,
+          seleccionado: _tipo == t.key,
           onTap: () {
-            _tipo = seleccionado ? null : tipo;
+            _tipo = _tipo == t.key ? null : t.key;
             _buscar();
           },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(estilo.icono, size: 20, color: estilo.color),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    texto,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: seleccionado
-                          ? FontWeight.bold
-                          : FontWeight.w500,
-                      color: seleccionado ? estilo.color : null,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
-      ),
-    );
-  }
+    ],
+  );
 
   /// Especie como selector segmentado; admite quedar sin selección (todas).
   Widget _selectorMascota() => SegmentedButton<int>(
@@ -320,24 +246,22 @@ class _MascotasPageState extends State<MascotasPage> {
               const SizedBox(height: 10),
               Text(campo.nombre),
               const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
+              SelectorOpciones(
+                opciones: [
                   for (final o in campo.opciones)
-                    _chip(
-                      texto: o.nombre,
-                      seleccionado: _caracteristicas[campo.campo] == o.id,
-                      onTap: () => setState(() {
-                        if (_caracteristicas[campo.campo] == o.id) {
-                          _caracteristicas.remove(campo.campo);
-                        } else {
-                          _caracteristicas[campo.campo] = o.id;
-                          _nombresCaracteristicas[campo.campo] = o.nombre;
-                        }
-                      }),
-                    ),
+                    OpcionSelector(o.id, o.nombre),
                 ],
+                seleccion: _caracteristicas[campo.campo],
+                onChanged: (v) => setState(() {
+                  if (v == null) {
+                    _caracteristicas.remove(campo.campo);
+                  } else {
+                    _caracteristicas[campo.campo] = v;
+                    _nombresCaracteristicas[campo.campo] = campo.opciones
+                        .firstWhere((o) => o.id == v)
+                        .nombre;
+                  }
+                }),
               ),
             ],
             if (_caracteristicas.isNotEmpty)
@@ -375,20 +299,17 @@ class _MascotasPageState extends State<MascotasPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _titulo('Estado'),
-        Wrap(
-          spacing: 6,
-          children: [
-            for (final (valor, texto) in [
-              (1, 'Activas'),
-              (2, 'Resueltas'),
-              (null, 'Todas'),
-            ])
-              _chip(
-                texto: texto,
-                seleccionado: _estado == valor,
-                onTap: () => setState(() => _estado = valor),
-              ),
+        // 0 representa "Todas" solo en el selector; el filtro usa null.
+        SegmentedButton<int>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: 1, label: Text('Activas')),
+            ButtonSegment(value: 2, label: Text('Resueltas')),
+            ButtonSegment(value: 0, label: Text('Todas')),
           ],
+          selected: {_estado ?? 0},
+          onSelectionChanged: (s) =>
+              setState(() => _estado = s.first == 0 ? null : s.first),
         ),
         _titulo('Ubicación'),
         CampoUbicacion(

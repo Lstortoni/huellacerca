@@ -50,11 +50,15 @@ class FotoPublicacion extends StatefulWidget {
     required this.service,
     required this.esAutor,
     this.pendiente,
+    this.atenuada = false,
   });
   final PublicacionDto publicacion;
   final PublicacionService service;
   final bool esAutor;
   final FotoSeleccionada? pendiente;
+
+  /// Aviso resuelto: la imagen se ve atenuada.
+  final bool atenuada;
   @override
   State<FotoPublicacion> createState() => _FotoPublicacionState();
 }
@@ -156,59 +160,123 @@ class _FotoPublicacionState extends State<FotoPublicacion> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      if (_pendiente != null && widget.esAutor)
-        Image.memory(
-          _pendiente!.bytes,
-          height: 220,
-          fit: BoxFit.contain,
-          errorBuilder: (_, _, _) =>
-              const Text('No pudimos mostrar la vista previa.'),
-        )
-      else if (_url != null)
-        Image.network(
-          widget.service.urlFoto(_url!),
-          height: 250,
-          fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => const SizedBox(
-            height: 80,
-            child: Center(child: Text('No pudimos cargar la foto.')),
-          ),
-        )
-      else
-        const Icon(Icons.pets_outlined, size: 56),
-      if (widget.esAutor) ...[
-        if (_ocupado) const LinearProgressIndicator(),
-        if (_error != null) ...[
-          Text(_error!),
-          const Text(
-            'Tu aviso ya está publicado. Podés volver a intentar la carga de la foto.',
-          ),
-        ],
-        Wrap(
-          spacing: 8,
-          children: [
-            TextButton.icon(
-              onPressed: _ocupado ? null : _elegir,
-              icon: const Icon(Icons.photo_library_outlined),
-              label: Text(_url == null ? 'Agregar foto' : 'Cambiar foto'),
-            ),
-            if (_pendiente != null)
-              TextButton(
-                onPressed: _ocupado ? null : _subir,
-                child: const Text('Reintentar foto'),
-              ),
-            if (_url != null)
-              TextButton(
-                onPressed: _ocupado ? null : _eliminar,
-                child: const Text('Eliminar foto'),
-              ),
-          ],
+  /// Sin foto: fondo suave con el emoji de la especie.
+  Widget _sinFoto(ThemeData theme, {String? mensaje}) => Container(
+    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          iconosMascota[widget.publicacion.tipoMascota] ?? '🐾',
+          style: const TextStyle(fontSize: 56),
         ),
+        if (mensaje != null) ...[
+          const SizedBox(height: 6),
+          Text(mensaje, style: theme.textTheme.bodySmall),
+        ],
       ],
-    ],
+    ),
   );
+
+  Widget _imagen(ThemeData theme) {
+    if (_pendiente != null && widget.esAutor) {
+      return Image.memory(
+        _pendiente!.bytes,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) =>
+            _sinFoto(theme, mensaje: 'No pudimos mostrar la vista previa.'),
+      );
+    }
+    if (_url != null) {
+      return Image.network(
+        widget.service.urlFoto(_url!),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) =>
+            _sinFoto(theme, mensaje: 'No pudimos cargar la foto.'),
+      );
+    }
+    return _sinFoto(theme);
+  }
+
+  /// Botones del autor sobre la imagen, abajo a la derecha.
+  Widget _controles() {
+    final estilo = FilledButton.styleFrom(
+      backgroundColor: Colors.white.withValues(alpha: 0.92),
+      foregroundColor: Colors.black87,
+      visualDensity: VisualDensity.compact,
+    );
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        FilledButton.icon(
+          style: estilo,
+          onPressed: _ocupado ? null : _elegir,
+          icon: const Icon(Icons.add_a_photo_rounded, size: 18),
+          label: Text(_url == null ? 'Agregar foto' : 'Cambiar foto'),
+        ),
+        if (_url != null)
+          FilledButton.icon(
+            style: estilo,
+            onPressed: _ocupado ? null : _eliminar,
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+            label: const Text('Eliminar foto'),
+          ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: AspectRatio(
+            aspectRatio: 4 / 3,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Opacity(
+                  opacity: widget.atenuada ? 0.55 : 1,
+                  child: _imagen(theme),
+                ),
+                if (widget.esAutor)
+                  Positioned(left: 8, right: 8, bottom: 8, child: _controles()),
+                if (widget.esAutor && _ocupado)
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: LinearProgressIndicator(),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        if (widget.esAutor && _error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+                const Text(
+                  'Tu aviso ya está publicado. Podés volver a intentar la carga de la foto.',
+                ),
+                if (_pendiente != null)
+                  TextButton.icon(
+                    onPressed: _ocupado ? null : _subir,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Reintentar foto'),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }

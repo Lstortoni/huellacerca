@@ -139,9 +139,16 @@ void main() {
       await tester.tap(find.text('Mi perfil'));
       await tester.pumpAndSettle();
       expect(find.text('Ana Prueba'), findsOneWidget);
+      // Iniciales: avatar de la barra (botón de la cuenta) y del perfil.
+      expect(find.text('AP'), findsNWidgets(2));
+      expect(find.text('Email sin confirmar'), findsOneWidget);
+      expect(find.text('Accesos rápidos'), findsOneWidget);
       await tester.tap(find.byTooltip('Cuenta'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Cerrar sesión'));
+      // El perfil también tiene un botón «Cerrar sesión»: usar el del menú.
+      await tester.tap(
+        find.widgetWithText(PopupMenuItem<String>, 'Cerrar sesión'),
+      );
       await tester.pumpAndSettle();
       expect(storage.value, isNull);
       expect(find.text('Buscar mascotas'), findsOneWidget);

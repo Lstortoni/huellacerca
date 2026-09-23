@@ -7,6 +7,7 @@ import 'package:huella_cerca/pages/publicacion_detalle_page.dart';
 import 'package:huella_cerca/pages/publicar_mascota_page.dart';
 import 'package:huella_cerca/pages/recomendar_servicio_page.dart';
 import 'package:huella_cerca/pages/prestador_detalle_page.dart';
+import 'package:huella_cerca/widgets/opcion_tipo_aviso.dart';
 
 import 'support/service_mocks.dart';
 import 'support/comunidad_mocks.dart';
@@ -105,16 +106,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tapVisible(
-        tester,
-        find.widgetWithText(
-          DropdownButtonFormField<int>,
-          '¿Qué querés publicar?',
-        ),
-      );
-      await tester.tap(find.text(tipo).last);
-      await tester.pumpAndSettle();
-      expect(find.text('Elegir fecha del suceso'), findsNothing);
+      await tapVisible(tester, find.text(tipo));
+      expect(find.text('Elegir fecha'), findsNothing);
       expect(
         find.widgetWithText(TextFormField, 'Nombre (opcional)'),
         tipo == 'Busco adoptar' ? findsNothing : findsOneWidget,
@@ -130,13 +123,14 @@ void main() {
           'Centro',
         );
       }
-      await tapVisible(tester, find.text('Publicar'));
+      await tapVisible(tester, find.text('Publicar aviso'));
       expect(service.creada, isNull); // Sigue exigiendo contacto.
+      expect(find.text('Revisá los campos marcados en rojo.'), findsOneWidget);
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Información de contacto'),
         'ana@example.com',
       );
-      await tapVisible(tester, find.text('Publicar'));
+      await tapVisible(tester, find.text('Publicar aviso'));
       expect(service.creada!.tipoPublicacion, tipo == 'Busco adoptar' ? 4 : 3);
       expect(service.creada!.fechaSuceso, isNull);
       expect(service.creada!.toJson().containsKey('fechaSuceso'), false);
@@ -195,7 +189,8 @@ void main() {
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
     expect(mascotas.resoluciones, 1);
-    expect(find.text('Perdida · Perro · Resuelta'), findsOneWidget);
+    expect(find.text('Resuelta'), findsOneWidget); // Chip de estado.
+    expect(find.text('Este caso fue resuelto'), findsOneWidget);
     expect(find.text('Marcar como resuelta'), findsNothing);
   });
   testWidgets('Otro mascotero no ve acción para resolver', (tester) async {
@@ -227,13 +222,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tapVisible(tester, find.text('Publicar'));
+      await tapVisible(tester, find.text('Publicar aviso'));
       expect(mascotas.creada, isNull);
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Descripción'),
         'Perro marrón con collar azul',
       );
-      await tapVisible(tester, find.text('Elegir fecha del suceso'));
+      expect(find.text('¿Cuándo se perdió?'), findsOneWidget);
+      await tapVisible(tester, find.text('Elegir fecha'));
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
       await elegirLocalidad(tester);
@@ -245,7 +241,7 @@ void main() {
         find.widgetWithText(TextFormField, 'Información de contacto'),
         '123456',
       );
-      await tapVisible(tester, find.text('Publicar'));
+      await tapVisible(tester, find.text('Publicar aviso'));
       expect(mascotas.creada!.localidadId, 'localidad-demo');
       expect(mascotas.creada!.nombreMascota, isNull);
       expect(find.byType(PublicacionDetallePage), findsOneWidget);
@@ -270,12 +266,11 @@ void main() {
           find.widgetWithText(TextFormField, 'Nombre del servicio o negocio'),
           'Veterinaria',
         );
+        // El nombre también dice «Veterinaria»: tocar la opción de la grilla.
         await tapVisible(
           tester,
-          find.widgetWithText(DropdownButtonFormField<String>, 'Rubro'),
+          find.widgetWithText(OpcionIcono, 'Veterinaria'),
         );
-        await tester.tap(find.text('Veterinaria').last);
-        await tester.pumpAndSettle();
         await elegirLocalidad(tester);
         await tapVisible(tester, find.text('Buscar similares'));
         await tapVisible(
@@ -311,12 +306,7 @@ void main() {
       find.widgetWithText(TextFormField, 'Nombre del servicio o negocio'),
       'Veterinaria',
     );
-    await tapVisible(
-      tester,
-      find.widgetWithText(DropdownButtonFormField<String>, 'Rubro'),
-    );
-    await tester.tap(find.text('Veterinaria').last);
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.widgetWithText(OpcionIcono, 'Veterinaria'));
     await elegirLocalidad(tester);
     await tapVisible(tester, find.text('Buscar similares'));
     await tester.enterText(
@@ -339,6 +329,6 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Ingresá para continuar.'), findsOneWidget);
-    expect(find.text('Publicar'), findsNothing);
+    expect(find.text('Publicar aviso'), findsNothing);
   });
 }

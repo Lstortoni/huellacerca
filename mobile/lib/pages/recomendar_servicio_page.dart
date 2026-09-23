@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/colores_app.dart';
+import '../core/theme/tema_servicios.dart';
 import '../models/recomendacion_dto.dart';
 import '../services/contracts/auth_service.dart';
 import '../services/contracts/recomendacion_service.dart';
@@ -8,6 +10,10 @@ import '../widgets/barra_superior.dart';
 import '../widgets/campo_ubicacion.dart';
 import '../widgets/contenido_formulario.dart';
 import '../widgets/gestion_recomendacion.dart';
+import '../widgets/grilla.dart';
+import '../widgets/opcion_tipo_aviso.dart';
+import '../widgets/seccion_formulario.dart';
+import '../widgets/tarjeta_prestador.dart';
 import 'prestador_detalle_page.dart';
 
 class RecomendarServicioPage extends StatefulWidget {
@@ -137,192 +143,280 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
     if (mounted) setState(() => _revision++);
   }
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: BarraSuperior(auth: widget.auth, titulo: 'Recomendar un servicio'),
-    body: RequiereSesion(
-      auth: widget.auth,
-      child: ContenidoFormulario(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('Primero buscá si el servicio ya fue recomendado.'),
-            Form(
-              key: _buscarForm,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _nombre,
-                    enabled: !_guardando,
-                    maxLength: 150,
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre del servicio o negocio',
-                    ),
-                    validator: (v) => (v?.trim().length ?? 0) < 2
-                        ? 'Escribí al menos 2 caracteres.'
-                        : null,
-                    onChanged: (_) => _invalidar(),
-                  ),
-                  FutureBuilder<List<RubroDto>>(
-                    future: _rubros,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return TextButton(
-                          onPressed: () => setState(() {
-                            _rubros = widget.service.rubros();
-                          }),
-                          child: const Text(
-                            'No pudimos cargar rubros. Reintentar',
-                          ),
-                        );
-                      }
-                      if (!snapshot.hasData) {
-                        return const LinearProgressIndicator();
-                      }
-                      return DropdownButtonFormField<String>(
-                        initialValue: _rubro,
-                        isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Rubro'),
-                        items: snapshot.data!
-                            .map(
-                              (r) => DropdownMenuItem(
-                                value: r.id,
-                                child: Text(r.nombre),
-                              ),
-                            )
-                            .toList(),
-                        validator: requerido,
-                        onChanged: _guardando
-                            ? null
-                            : (v) {
-                                _rubro = v;
-                                _invalidar();
-                              },
-                      );
-                    },
-                  ),
-                  CampoUbicacion(
-                    service: widget.ubicacion,
-                    obligatorio: true,
-                    enabled: !_guardando,
-                    onChanged: (_, l) {
-                      _localidad = l;
-                      _invalidar();
-                    },
-                  ),
-                  FilledButton(
-                    onPressed: _buscando || _guardando ? null : _buscar,
-                    child: Text(_buscando ? 'Buscando…' : 'Buscar similares'),
-                  ),
-                ],
-              ),
-            ),
-            if (_similares != null) ...[
-              const SizedBox(height: 16),
+  Widget _encabezado(ThemeData theme) => Container(
+    margin: const EdgeInsets.only(bottom: 14),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(24),
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [ColoresApp.ambar, Color(0xFFB57A12)],
+      ),
+    ),
+    child: Row(
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: Colors.white.withValues(alpha: 0.18),
+          child: const Icon(Icons.recommend_rounded, color: Colors.white),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                _similares!.isEmpty
-                    ? 'No encontramos servicios similares.'
-                    : 'Encontramos estos servicios. ¿Es alguno de ellos?',
-              ),
-              ..._similares!.map(
-                (p) => Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          p.nombre,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        Text('${p.rubro} · ${p.localidad}'),
-                        if (p.direccion != null) Text(p.direccion!),
-                        GestionRecomendacion(
-                          key: ValueKey('$_revision:${p.id}'),
-                          prestadorId: p.id,
-                          auth: widget.auth,
-                          service: widget.service,
-                          compacto: true,
-                          onChanged: () async => _verPrestador(p.id),
-                          onEditar: () => _verPrestador(p.id),
-                        ),
-                      ],
-                    ),
-                  ),
+                'Compartí una buena experiencia',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              OutlinedButton(
-                onPressed: _guardando
-                    ? null
-                    : () => setState(() {
-                        _nuevo = true;
-                        _error = null;
-                      }),
-                child: const Text('Es otro servicio: crear uno nuevo'),
+              Text(
+                'Primero buscá si el servicio ya fue recomendado.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
               ),
             ],
-            if (_nuevo)
-              Form(
-                key: _crearForm,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 16),
-                    Text(
-                      'Nuevo servicio: ${_nombre.text.trim()}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    TextFormField(
-                      controller: _direccion,
-                      enabled: !_guardando,
-                      maxLength: 250,
-                      decoration: const InputDecoration(
-                        labelText: 'Dirección (opcional)',
-                      ),
-                    ),
-                    TextFormField(
-                      controller: _telefono,
-                      enabled: !_guardando,
-                      maxLength: 40,
-                      decoration: const InputDecoration(
-                        labelText: 'Teléfono (opcional)',
-                      ),
-                    ),
-                    TextFormField(
-                      controller: _enlace,
-                      enabled: !_guardando,
-                      maxLength: 500,
-                      decoration: const InputDecoration(
-                        labelText: 'Enlace (opcional)',
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return null;
-                        final uri = Uri.tryParse(v.trim());
-                        return uri != null &&
-                                uri.host.isNotEmpty &&
-                                (uri.scheme == 'http' || uri.scheme == 'https')
-                            ? null
-                            : 'Ingresá un enlace http:// o https:// válido.';
-                      },
-                    ),
-                    FilledButton(
-                      onPressed: _guardando ? null : _guardar,
-                      child: Text(
-                        _guardando ? 'Guardando…' : 'Crear y recomendar',
-                      ),
-                    ),
-                  ],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _campoRubro(ThemeData theme) => FutureBuilder<List<RubroDto>>(
+    future: _rubros,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return TextButton(
+          onPressed: () => setState(() {
+            _rubros = widget.service.rubros();
+          }),
+          child: const Text('No pudimos cargar rubros. Reintentar'),
+        );
+      }
+      if (!snapshot.hasData) return const LinearProgressIndicator();
+      return FormField<String>(
+        validator: (_) => _rubro == null ? 'Elegí un rubro.' : null,
+        builder: (field) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Rubro', style: theme.textTheme.labelLarge),
+            const SizedBox(height: 6),
+            Grilla(
+              columnas: 3,
+              children: [
+                for (final r in snapshot.data!)
+                  OpcionIcono(
+                    icono: iconoRubro(r.nombre),
+                    texto: r.nombre,
+                    color: ColoresApp.ambar,
+                    fondo: ColoresApp.ambarSuave,
+                    vertical: true,
+                    seleccionado: _rubro == r.id,
+                    onTap: _guardando
+                        ? null
+                        : () {
+                            _rubro = r.id;
+                            field.didChange(r.id);
+                            _invalidar();
+                          },
+                  ),
+              ],
+            ),
+            if (field.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  field.errorText!,
+                  style: TextStyle(color: theme.colorScheme.error),
                 ),
-              ),
-            if (_error != null)
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
           ],
         ),
+      );
+    },
+  );
+
+  Widget _similaresEncontrados(ThemeData theme) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Text(
+          _similares!.isEmpty
+              ? 'No encontramos servicios similares.'
+              : 'Encontramos estos servicios. ¿Es alguno de ellos?',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
+      for (final p in _similares!)
+        TarjetaPrestador(
+          prestador: p,
+          pie: GestionRecomendacion(
+            key: ValueKey('$_revision:${p.id}'),
+            prestadorId: p.id,
+            auth: widget.auth,
+            service: widget.service,
+            compacto: true,
+            onChanged: () async => _verPrestador(p.id),
+            onEditar: () => _verPrestador(p.id),
+          ),
+        ),
+      OutlinedButton.icon(
+        onPressed: _guardando
+            ? null
+            : () => setState(() {
+                _nuevo = true;
+                _error = null;
+              }),
+        icon: const Icon(Icons.add_business_rounded),
+        label: const Text('Es otro servicio: crear uno nuevo'),
+      ),
+    ],
+  );
+
+  Widget _formularioNuevo(ThemeData theme) => Form(
+    key: _crearForm,
+    child: SeccionFormulario(
+      titulo: 'Nuevo servicio: ${_nombre.text.trim()}',
+      subtitulo: 'Estos datos son opcionales y se muestran en la ficha.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 12,
+        children: [
+          TextFormField(
+            controller: _direccion,
+            enabled: !_guardando,
+            maxLength: 250,
+            decoration: const InputDecoration(
+              labelText: 'Dirección (opcional)',
+              prefixIcon: Icon(Icons.location_on_rounded),
+              counterText: '',
+            ),
+          ),
+          TextFormField(
+            controller: _telefono,
+            enabled: !_guardando,
+            maxLength: 40,
+            decoration: const InputDecoration(
+              labelText: 'Teléfono (opcional)',
+              prefixIcon: Icon(Icons.call_rounded),
+              counterText: '',
+            ),
+          ),
+          TextFormField(
+            controller: _enlace,
+            enabled: !_guardando,
+            maxLength: 500,
+            decoration: const InputDecoration(
+              labelText: 'Enlace (opcional)',
+              prefixIcon: Icon(Icons.link_rounded),
+              counterText: '',
+            ),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return null;
+              final uri = Uri.tryParse(v.trim());
+              return uri != null &&
+                      uri.host.isNotEmpty &&
+                      (uri.scheme == 'http' || uri.scheme == 'https')
+                  ? null
+                  : 'Ingresá un enlace http:// o https:// válido.';
+            },
+          ),
+          FilledButton.icon(
+            style: ColoresApp.accionPrincipal,
+            onPressed: _guardando ? null : _guardar,
+            icon: const Icon(Icons.thumb_up_rounded),
+            label: Text(_guardando ? 'Guardando…' : 'Crear y recomendar'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) => TemaServicios(
+    child: Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Scaffold(
+          appBar: BarraSuperior(
+            auth: widget.auth,
+            titulo: 'Recomendar un servicio',
+          ),
+          body: RequiereSesion(
+            auth: widget.auth,
+            child: ContenidoFormulario(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _encabezado(theme),
+                  Form(
+                    key: _buscarForm,
+                    child: SeccionFormulario(
+                      titulo: '¿Qué servicio querés recomendar?',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextFormField(
+                            controller: _nombre,
+                            enabled: !_guardando,
+                            maxLength: 150,
+                            decoration: const InputDecoration(
+                              labelText: 'Nombre del servicio o negocio',
+                              prefixIcon: Icon(Icons.storefront_rounded),
+                              counterText: '',
+                            ),
+                            validator: (v) => (v?.trim().length ?? 0) < 2
+                                ? 'Escribí al menos 2 caracteres.'
+                                : null,
+                            onChanged: (_) => _invalidar(),
+                          ),
+                          const SizedBox(height: 14),
+                          _campoRubro(theme),
+                          const SizedBox(height: 14),
+                          CampoUbicacion(
+                            service: widget.ubicacion,
+                            obligatorio: true,
+                            enabled: !_guardando,
+                            onChanged: (_, l) {
+                              _localidad = l;
+                              _invalidar();
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          FilledButton.icon(
+                            onPressed: _buscando || _guardando ? null : _buscar,
+                            icon: const Icon(Icons.search_rounded),
+                            label: Text(
+                              _buscando ? 'Buscando…' : 'Buscar similares',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (_similares != null) _similaresEncontrados(theme),
+                  if (_nuevo) ...[
+                    const SizedBox(height: 14),
+                    _formularioNuevo(theme),
+                  ],
+                  if (_error != null)
+                    Text(
+                      _error!,
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     ),
   );
 }

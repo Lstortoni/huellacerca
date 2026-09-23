@@ -15,4 +15,21 @@ abstract final class ColoresApp {
   static const azulSuave = Color(0xFFDFEBF8);
   static const violeta = Color(0xFF6D43A6);
   static const violetaSuave = Color(0xFFEEE4F8);
+
+  /// Ámbar = acción principal: el botón que inicia una tarea y el que la termina.
+  static const accionPrincipal = ButtonStyle(
+    backgroundColor: WidgetStatePropertyAll(ambarBoton),
+    foregroundColor: WidgetStatePropertyAll(ambarTexto),
+    minimumSize: WidgetStatePropertyAll(Size(0, 52)),
+  );
+
+  /// Muestra de color por id de ColorPredominante de la API (7 = Mixto/Otro).
+  static const pelaje = {
+    1: Color(0xFF222222),
+    2: Color(0xFFFFFFFF),
+    3: Color(0xFF7B4A2A),
+    4: Color(0xFF9A9A9A),
+    5: Color(0xFFE3C99A),
+    6: Color(0xFFE08A2E),
+  };
 }

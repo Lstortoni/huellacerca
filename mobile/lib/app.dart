@@ -49,6 +49,12 @@ class _HuellaCercaAppState extends State<HuellaCercaApp> {
           fontWeight: FontWeight.w800,
         ),
       ),
+      // Campos con fondo blanco y bordes redondeados en toda la app.
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      ),
       useMaterial3: true,
     ),
     home: InicioPage(auth: getIt<AuthService>()),

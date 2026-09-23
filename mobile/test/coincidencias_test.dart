@@ -134,11 +134,11 @@ void main() {
         await elegir(tester, '¿Qué querés publicar?', tipo.value);
         await completar(tester);
         if (tipo.key <= 2) {
-          await tapVisible(tester, find.text('Elegir fecha del suceso'));
+          await tapVisible(tester, find.text('Elegir fecha'));
           await tester.tap(find.text('OK'));
           await tester.pumpAndSettle();
         }
-        await tapVisible(tester, find.text('Publicar'));
+        await tapVisible(tester, find.text('Publicar aviso'));
         expect(find.text('Posibles coincidencias'), findsOneWidget);
         expect(find.text('Candidato marrón'), findsOneWidget);
         expect(service.llamadas, 1);

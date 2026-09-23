@@ -73,7 +73,10 @@ void main() {
     expect(find.text('Ana Prueba'), findsOneWidget);
     await tester.tap(find.byTooltip('Cuenta'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cerrar sesión'));
+    // El perfil también tiene un botón «Cerrar sesión»: usar el del menú.
+    await tester.tap(
+      find.widgetWithText(PopupMenuItem<String>, 'Cerrar sesión'),
+    );
     await tester.pumpAndSettle();
     expect(auth.autenticado, isFalse);
     expect(auth.restores, 1);

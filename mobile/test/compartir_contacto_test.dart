@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:huella_cerca/core/network/http_api_client.dart';
 import 'package:huella_cerca/core/util/contacto.dart';
+import 'package:huella_cerca/models/auth_dto.dart';
 import 'package:huella_cerca/models/publicacion_dto.dart';
 import 'package:huella_cerca/models/recomendacion_dto.dart';
 import 'package:huella_cerca/pages/prestador_detalle_page.dart';
@@ -128,6 +129,29 @@ void main() {
     service.hayApp = false;
     await tapVisible(tester, find.text('Llamar'));
     expect(find.textContaining('No encontramos una app'), findsOneWidget);
+  });
+
+  testWidgets('El autor puede compartir pero no se llama a sí mismo', (
+    tester,
+  ) async {
+    final auth = AuthServiceMock();
+    final service = PublicacionServiceMock(); // Autor: mascotero-1.
+    addTearDown(auth.dispose);
+    await auth.login(const LoginRequest('a@b.com', '12345678'));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PublicacionDetallePage(
+          id: 'publicacion-1',
+          auth: auth,
+          service: service,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Compartir aviso'), findsOneWidget);
+    expect(find.text('Así te van a contactar'), findsOneWidget);
+    expect(find.text('Llamar'), findsNothing);
+    expect(find.text('WhatsApp'), findsNothing);
   });
 
   testWidgets('Aviso resuelto no ofrece compartir', (tester) async {

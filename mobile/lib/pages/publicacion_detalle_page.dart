@@ -152,7 +152,12 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
   }
 
   /// Bloque destacado: es la acción principal de quien lee el aviso.
-  Widget _contacto(ThemeData theme, PublicacionDto p) => Padding(
+  /// Al autor solo se le muestra cómo lo van a contactar, sin Llamar/WhatsApp.
+  Widget _contacto(
+    ThemeData theme,
+    PublicacionDto p, {
+    required bool esAutor,
+  }) => Padding(
     padding: const EdgeInsets.only(bottom: 14),
     child: Material(
       color: ColoresApp.verdeSuave,
@@ -163,7 +168,7 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Contacto',
+              esAutor ? 'Así te van a contactar' : 'Contacto',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -186,19 +191,22 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
                 ),
               ],
             ),
-            if (telefonoEn(p.informacionContacto) case final telefono?) ...[
-              const SizedBox(height: 4),
-              BotonesContacto(
-                llamar: () => widget.service.llamar(telefono),
-                whatsapp: () => widget.service.escribirPorWhatsApp(
-                  telefono,
-                  'Hola, te escribo por el aviso de ${p.titulo} en Huella Cerca.',
+            if (!esAutor)
+              if (telefonoEn(p.informacionContacto) case final telefono?) ...[
+                const SizedBox(height: 4),
+                BotonesContacto(
+                  llamar: () => widget.service.llamar(telefono),
+                  whatsapp: () => widget.service.escribirPorWhatsApp(
+                    telefono,
+                    'Hola, te escribo por el aviso de ${p.titulo} en Huella Cerca.',
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-            ],
+                const SizedBox(height: 10),
+              ],
             Text(
-              'Publicado por ${p.autor}',
+              esAutor
+                  ? 'Revisá que el dato sea correcto: es público.'
+                  : 'Publicado por ${p.autor}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -338,7 +346,7 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
                       publicacion: p,
                       service: widget.service,
                     ),
-                  _contacto(theme, p),
+                  _contacto(theme, p, esAutor: esAutor),
                   if (esAutor) _tuAviso(theme, p),
                 ],
               );

@@ -1,4 +1,6 @@
 import '../../core/network/api_client.dart';
+import '../../core/util/contacto.dart';
+import '../contracts/acciones_externas.dart';
 import '../../models/pagina_dto.dart';
 import '../../models/publicacion_dto.dart';
 import '../contracts/auth_service.dart';
@@ -7,8 +9,25 @@ import '../contracts/selector_fotos.dart';
 import '../../models/foto_seleccionada.dart';
 
 class PublicacionServiceApi implements PublicacionService {
-  PublicacionServiceApi(this._api, this._auth, [this._selector]);
+  PublicacionServiceApi(
+    this._api,
+    this._auth, [
+    this._selector,
+    this._acciones,
+  ]);
   final SelectorFotos? _selector;
+  final AccionesExternas? _acciones;
+  @override
+  Future<void> compartir(PublicacionDto p) async => _acciones?.compartir(
+    p.textoParaCompartir,
+    urlImagen: p.fotoUrl == null ? null : urlFoto(p.fotoUrl!),
+  );
+  @override
+  Future<bool> llamar(String telefono) async =>
+      await _acciones?.abrir(uriLlamada(telefono)) ?? false;
+  @override
+  Future<bool> escribirPorWhatsApp(String telefono, String mensaje) async =>
+      await _acciones?.abrir(uriWhatsApp(telefono, mensaje)) ?? false;
   @override
   Future<FotoSeleccionada?> elegirFoto() async => _selector?.elegir();
   @override

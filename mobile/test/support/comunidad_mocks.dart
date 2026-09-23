@@ -43,6 +43,24 @@ Map<String, dynamic> recomendacionJson() => {
 };
 
 class PublicacionServiceMock implements PublicacionService {
+  PublicacionDto? compartida;
+  final abiertos = <String>[];
+  bool hayApp = true;
+  @override
+  Future<void> compartir(PublicacionDto publicacion) async =>
+      compartida = publicacion;
+  @override
+  Future<bool> llamar(String telefono) async {
+    abiertos.add('tel:$telefono');
+    return hayApp;
+  }
+
+  @override
+  Future<bool> escribirPorWhatsApp(String telefono, String mensaje) async {
+    abiertos.add('wa:$telefono');
+    return hayApp;
+  }
+
   @override
   Future<FotoSeleccionada?> elegirFoto() async => null;
   @override
@@ -151,6 +169,19 @@ List<Map<String, dynamic>> caracteristicasJson(int tipoMascota) => [
 ];
 
 class RecomendacionServiceMock implements RecomendacionService {
+  final abiertos = <String>[];
+  @override
+  Future<bool> llamar(String telefono) async {
+    abiertos.add('tel:$telefono');
+    return true;
+  }
+
+  @override
+  Future<bool> escribirPorWhatsApp(String telefono, String mensaje) async {
+    abiertos.add('wa:$telefono');
+    return true;
+  }
+
   CrearRecomendacionRequest? creada;
   RecomendacionDto? mia;
   int creaciones = 0, retiros = 0;

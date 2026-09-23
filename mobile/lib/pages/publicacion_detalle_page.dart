@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../core/theme/colores_app.dart';
 import '../core/theme/colores_aviso.dart';
+import '../core/util/contacto.dart';
+import '../widgets/botones_contacto.dart';
 import '../models/publicacion_dto.dart';
 import '../widgets/estado_mensaje.dart';
 import '../widgets/etiqueta_aviso.dart';
@@ -184,6 +186,17 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
                 ),
               ],
             ),
+            if (telefonoEn(p.informacionContacto) case final telefono?) ...[
+              const SizedBox(height: 4),
+              BotonesContacto(
+                llamar: () => widget.service.llamar(telefono),
+                whatsapp: () => widget.service.escribirPorWhatsApp(
+                  telefono,
+                  'Hola, te escribo por el aviso de ${p.titulo} en Huella Cerca.',
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             Text(
               'Publicado por ${p.autor}',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -301,6 +314,15 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
                       if (resuelta) const EtiquetaAviso.resuelta(),
                     ],
                   ),
+                  // Difundir es lo primero que se hace ante una mascota perdida.
+                  if (!resuelta) ...[
+                    const SizedBox(height: 12),
+                    FilledButton.tonalIcon(
+                      onPressed: () => widget.service.compartir(p),
+                      icon: const Icon(Icons.share_rounded),
+                      label: const Text('Compartir aviso'),
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   _datos(theme, p),
                   SeccionFormulario(

@@ -1,13 +1,22 @@
 import '../../core/network/api_client.dart';
+import '../../core/util/contacto.dart';
+import '../contracts/acciones_externas.dart';
 import '../../models/pagina_dto.dart';
 import '../../models/recomendacion_dto.dart';
 import '../contracts/auth_service.dart';
 import '../contracts/recomendacion_service.dart';
 
 class RecomendacionServiceApi implements RecomendacionService {
-  RecomendacionServiceApi(this._api, this._auth);
+  RecomendacionServiceApi(this._api, this._auth, [this._acciones]);
   final ApiClient _api;
   final AuthService _auth;
+  final AccionesExternas? _acciones;
+  @override
+  Future<bool> llamar(String telefono) async =>
+      await _acciones?.abrir(uriLlamada(telefono)) ?? false;
+  @override
+  Future<bool> escribirPorWhatsApp(String telefono, String mensaje) async =>
+      await _acciones?.abrir(uriWhatsApp(telefono, mensaje)) ?? false;
   @override
   Future<PaginaDto<MascoteroRecomiendaDto>> recomendadores(
     String prestadorId, {

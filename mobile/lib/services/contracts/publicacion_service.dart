@@ -21,4 +21,11 @@ abstract class PublicacionService {
   Future<PublicacionDto> detalle(String id);
   Future<PublicacionDto> crear(CrearPublicacionRequest request);
   Future<PublicacionDto> resolver(String id);
+
+  /// Difunde el aviso con su texto y, si tiene, su foto.
+  Future<void> compartir(PublicacionDto publicacion);
+
+  /// Abren la app de teléfono o WhatsApp; false si no hay app disponible.
+  Future<bool> llamar(String telefono);
+  Future<bool> escribirPorWhatsApp(String telefono, String mensaje);
 }

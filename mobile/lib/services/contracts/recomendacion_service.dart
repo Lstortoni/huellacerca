@@ -22,4 +22,8 @@ abstract class RecomendacionService {
   Future<RecomendacionDto> crear(CrearRecomendacionRequest request);
   Future<RecomendacionDto> guardarAspectos(String id, List<String> aspectoIds);
   Future<void> retirar(String id);
+
+  /// Abren la app de teléfono o WhatsApp; false si no hay app disponible.
+  Future<bool> llamar(String telefono);
+  Future<bool> escribirPorWhatsApp(String telefono, String mensaje);
 }

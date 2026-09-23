@@ -111,6 +111,30 @@ class PublicacionDto {
       tipoPublicacion >= 3 ? 'Publicado' : 'Fecha del suceso';
   String get titulo => nombreMascota ?? tiposMascota[tipoMascota] ?? 'Mascota';
 
+  /// Texto listo para difundir por WhatsApp u otras apps.
+  String get textoParaCompartir {
+    final encabezado = switch (tipoPublicacion) {
+      1 => '🔍 MASCOTA PERDIDA',
+      2 => '📍 MASCOTA ENCONTRADA',
+      3 => '💜 EN ADOPCIÓN',
+      _ => '🏠 BUSCA ADOPTAR',
+    };
+    final especie = tiposMascota[tipoMascota] ?? 'Mascota';
+    return [
+      nombreMascota == null
+          ? '$encabezado: $especie'
+          : '$encabezado: $nombreMascota ($especie)',
+      '📍 $localidad, $provincia${zona.isEmpty ? '' : ' · $zona'}',
+      '📅 $resumenFecha (${fechaVisible(fechaReferencia)})',
+      '',
+      descripcion,
+      '',
+      '📞 Contacto: $informacionContacto',
+      '',
+      'Publicado en Huella Cerca 🐾',
+    ].join('\n');
+  }
+
   /// Ej.: "Se perdió hace 3 días", "Publicado hoy".
   String get resumenFecha {
     final cuando = fechaRelativa(fechaReferencia);

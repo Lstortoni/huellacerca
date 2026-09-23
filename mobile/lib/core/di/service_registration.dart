@@ -14,7 +14,9 @@ import '../network/api_client.dart';
 import '../network/http_api_client.dart';
 import '../storage/session_storage.dart';
 import '../storage/secure_session_storage.dart';
+import '../../services/contracts/acciones_externas.dart';
 import '../../services/contracts/selector_fotos.dart';
+import '../../services/implementations/acciones_externas_plataforma.dart';
 import '../../services/implementations/selector_fotos_galeria.dart';
 
 final getIt = GetIt.instance;
@@ -45,10 +47,18 @@ void configurarServicios({
       getIt<ApiClient>(),
       getIt<AuthService>(),
       getIt<SelectorFotos>(),
+      getIt<AccionesExternas>(),
     ),
   );
   getIt.registerLazySingleton<SelectorFotos>(() => SelectorFotosGaleria());
+  getIt.registerLazySingleton<AccionesExternas>(
+    () => AccionesExternasPlataforma(),
+  );
   getIt.registerLazySingleton<RecomendacionService>(
-    () => RecomendacionServiceApi(getIt<ApiClient>(), getIt<AuthService>()),
+    () => RecomendacionServiceApi(
+      getIt<ApiClient>(),
+      getIt<AuthService>(),
+      getIt<AccionesExternas>(),
+    ),
   );
 }

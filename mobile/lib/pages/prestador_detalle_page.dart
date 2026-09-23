@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../core/theme/colores_app.dart';
 import '../core/theme/tema_servicios.dart';
+import '../core/util/contacto.dart';
+import '../widgets/botones_contacto.dart';
 import '../models/recomendacion_dto.dart';
 import '../services/contracts/auth_service.dart';
 import '../services/contracts/recomendacion_service.dart';
@@ -127,10 +129,21 @@ class _PrestadorDetallePageState extends State<PrestadorDetallePage> {
       if (p.enlace?.isNotEmpty == true) (Icons.link_rounded, p.enlace!),
     ];
     if (filas.isEmpty) return const SizedBox.shrink();
+    final telefono = telefonoEn(p.telefono ?? '');
     return SeccionFormulario(
       titulo: 'Contacto',
       child: Column(
         children: [
+          if (telefono != null) ...[
+            BotonesContacto(
+              llamar: () => widget.service.llamar(telefono),
+              whatsapp: () => widget.service.escribirPorWhatsApp(
+                telefono,
+                'Hola, te contacto porque te recomendaron en Huella Cerca.',
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
           for (final (icono, texto) in filas)
             Row(
               children: [

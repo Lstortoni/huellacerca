@@ -647,6 +647,59 @@ Esperado: 200 con `{ "id": "ID_FOTO", "url": "api/publicaciones/PUBLICACION_ID/f
 
 Validar: sin JWT al modificar → 401; otro autor → 403; formato corrupto/no admitido → 400; archivo >10 MiB → 413; reemplazos simultáneos → uno puede devolver 409 y se debe recargar el detalle; límite de subidas → 429 (15 por minuto por usuario).
 
+## NotificacionesController — posibles coincidencias
+
+Todos requieren **Authorization → Bearer Token → accessToken**. No se envía refreshToken ni ID de destinatario. Documentación del flujo: [docs/notificaciones.md](docs/notificaciones.md).
+
+### a) Listar
+
+`GET http://localhost:5080/api/notificaciones?pagina=1&tamanoPagina=20&soloNoLeidas=false`
+
+Sin body. Devuelve una página con `items`, `total`, `pagina`, `tamanoPagina`. Ejemplo de item (reemplazar los IDs ilustrativos por los reales):
+
+```json
+{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "publicacionId": "22222222-2222-2222-2222-222222222222",
+  "publicacionCoincidenteId": "33333333-3333-3333-3333-333333333333",
+  "titulo": "Nueva posible coincidencia",
+  "mensaje": "Hay una publicación que podría coincidir con tu aviso.",
+  "fechaCreacion": "2026-09-24T20:00:00Z",
+  "fechaLectura": null
+}
+```
+
+`publicacionId` es tu aviso, al que se puede navegar. `publicacionCoincidenteId` es el candidato. `soloNoLeidas=true` filtra pendientes. Máximo 50 por página.
+
+### b) Contador
+
+`GET http://localhost:5080/api/notificaciones/no-leidas/cantidad`
+
+Sin body. Respuesta: `{ "cantidad": 2 }`.
+
+### c) Marcar una como leída
+
+`PATCH http://localhost:5080/api/notificaciones/NOTIFICACION_ID/leer`
+
+Sin body. Respuesta 204. Repetir es válido. Un ID ajeno o inexistente devuelve 404.
+
+### d) Marcar todas como leídas
+
+`PATCH http://localhost:5080/api/notificaciones/leer-todas`
+
+Sin body. Respuesta 204. Solo afecta las notificaciones del usuario del token.
+
+### e) Flujo de prueba
+
+1. Crear con usuario A un aviso de extravío activo, con tamaño Chico y una localidad.
+2. Crear con usuario B un hallazgo de la misma especie/localidad, mismo tamaño y fecha compatible.
+3. Esperar el procesamiento (normalmente hasta 10 segundos, más si hay cola).
+4. Consultar a) con el token de A y después con el de B: ambos tienen notificación.
+5. Marcar la de A leída; la de B sigue sin leer. Consultar otra vez coincidencias no genera avisos duplicados.
+6. Repetir con Doy en adopción / Busco adoptar; no necesitan fecha de suceso.
+
+No se generan avisos entre publicaciones del mismo autor ni un envío inicial masivo de publicaciones históricas. No hay push Firebase ni campanita en la app en esta etapa.
+
 ## Resumen de respuestas
 
 | Código | Significado en estas pruebas |

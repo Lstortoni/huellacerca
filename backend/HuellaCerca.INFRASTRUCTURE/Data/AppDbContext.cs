@@ -18,6 +18,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<RecomendacionAspecto> RecomendacionesAspectos => Set<RecomendacionAspecto>();
     public DbSet<PublicacionMascota> PublicacionesMascotas => Set<PublicacionMascota>();
     public DbSet<FotoPublicacion> FotosPublicaciones => Set<FotoPublicacion>();
+    public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
+    public DbSet<NotificacionPendiente> NotificacionesPendientes => Set<NotificacionPendiente>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

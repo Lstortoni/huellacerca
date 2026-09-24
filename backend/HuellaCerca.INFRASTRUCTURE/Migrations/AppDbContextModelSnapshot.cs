@@ -199,6 +199,69 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                     b.ToTable("mascoteros", (string)null);
                 });
 
+            modelBuilder.Entity("HuellaCerca.MODEL.Notificacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaLectura")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("MascoteroId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Mensaje")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("PublicacionCoincidenteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PublicacionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MascoteroId")
+                        .HasFilter("\"FechaLectura\" IS NULL");
+
+                    b.HasIndex("PublicacionCoincidenteId");
+
+                    b.HasIndex("PublicacionId");
+
+                    b.HasIndex("MascoteroId", "FechaCreacion", "Id");
+
+                    b.HasIndex("MascoteroId", "PublicacionId", "PublicacionCoincidenteId")
+                        .IsUnique();
+
+                    b.ToTable("Notificaciones", (string)null);
+                });
+
+            modelBuilder.Entity("HuellaCerca.MODEL.NotificacionPendiente", b =>
+                {
+                    b.Property<Guid>("PublicacionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PublicacionId");
+
+                    b.HasIndex("FechaCreacion");
+
+                    b.ToTable("NotificacionesPendientes", (string)null);
+                });
+
             modelBuilder.Entity("HuellaCerca.MODEL.Pais", b =>
                 {
                     b.Property<string>("Codigo")
@@ -617,6 +680,36 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                         .IsRequired();
 
                     b.Navigation("Localidad");
+                });
+
+            modelBuilder.Entity("HuellaCerca.MODEL.Notificacion", b =>
+                {
+                    b.HasOne("HuellaCerca.MODEL.Mascotero", null)
+                        .WithMany()
+                        .HasForeignKey("MascoteroId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HuellaCerca.MODEL.PublicacionMascota", null)
+                        .WithMany()
+                        .HasForeignKey("PublicacionCoincidenteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HuellaCerca.MODEL.PublicacionMascota", null)
+                        .WithMany()
+                        .HasForeignKey("PublicacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HuellaCerca.MODEL.NotificacionPendiente", b =>
+                {
+                    b.HasOne("HuellaCerca.MODEL.PublicacionMascota", null)
+                        .WithMany()
+                        .HasForeignKey("PublicacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("HuellaCerca.MODEL.PrestadorServicio", b =>

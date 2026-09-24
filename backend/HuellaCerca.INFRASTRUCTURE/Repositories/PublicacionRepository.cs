@@ -14,7 +14,11 @@ public sealed class PublicacionRepository(AppDbContext db) : IPublicacionReposit
         .Include(x => x.Localidad).ThenInclude(x => x.Provincia)
         .Include(x => x.Foto);
 
-    public void Agregar(PublicacionMascota publicacion) => db.PublicacionesMascotas.Add(publicacion);
+    public void Agregar(PublicacionMascota publicacion)
+    {
+        db.PublicacionesMascotas.Add(publicacion);
+        db.NotificacionesPendientes.Add(new NotificacionPendiente { PublicacionId = publicacion.Id });
+    }
 
     public Task<PublicacionMascota?> PorIdAsync(Guid id, CancellationToken ct) =>
         Publicaciones.SingleOrDefaultAsync(x => x.Id == id, ct);
@@ -67,23 +71,10 @@ public sealed class PublicacionRepository(AppDbContext db) : IPublicacionReposit
     }
 
     public async Task<(IReadOnlyList<PublicacionMascota> Items, int Total)> CoincidenciasAsync(
-        PublicacionMascota origen, DateOnly? desde, DateOnly? hasta, CoincidenciasQuery q, CancellationToken ct)
+        PublicacionMascota origen, CoincidenciasQuery q, CancellationToken ct)
     {
-        var tipoOpuesto = origen.TipoPublicacion switch
-        {
-            TipoPublicacionMascota.Perdida => TipoPublicacionMascota.Encontrada,
-            TipoPublicacionMascota.Encontrada => TipoPublicacionMascota.Perdida,
-            TipoPublicacionMascota.Adopcion => TipoPublicacionMascota.BuscoAdoptar,
-            TipoPublicacionMascota.BuscoAdoptar => TipoPublicacionMascota.Adopcion,
-            _ => throw new AppException(400, "Tipo de publicación no válido.")
-        };
         // Puntuar en SQL antes de paginar: nunca traer todos los candidatos a memoria.
-        var candidatos = db.PublicacionesMascotas.AsNoTracking()
-            .Where(x => x.Id != origen.Id && x.Estado == EstadoPublicacionMascota.Activa
-                && x.TipoPublicacion == tipoOpuesto && x.TipoMascota == origen.TipoMascota
-                && x.LocalidadId == origen.LocalidadId
-                && (!desde.HasValue || x.FechaSuceso >= desde)
-                && (!hasta.HasValue || x.FechaSuceso <= hasta))
+        var candidatos = CoincidenciasConsulta.Aplicar(db.PublicacionesMascotas.AsNoTracking(), origen)
             .Select(x => new {
                 x.Id, x.FechaCreacion,
                 Puntos = (origen.Tamano.HasValue && x.Tamano == origen.Tamano ? 1 : 0)

@@ -104,17 +104,7 @@ public sealed class PublicacionService(IPublicacionRepository repository, IAuthR
         var requiereFecha = origen.TipoPublicacion is TipoPublicacionMascota.Perdida or TipoPublicacionMascota.Encontrada;
         if (origen.Estado != EstadoPublicacionMascota.Activa || (requiereFecha && origen.FechaSuceso is null))
             return new([], 0, query.Pagina, query.TamanoPagina);
-        // Hallazgo entre -3 y +30 días del extravío. Invertir el intervalo al consultar un hallazgo.
-        DateOnly? desde = null, hasta = null;
-        if (requiereFecha && origen.FechaSuceso is DateOnly fecha)
-        {
-            var perdida = origen.TipoPublicacion == TipoPublicacionMascota.Perdida;
-            DateOnly Desplazar(int dias) => DateOnly.FromDayNumber(Math.Clamp(
-                fecha.DayNumber + dias, DateOnly.MinValue.DayNumber, DateOnly.MaxValue.DayNumber));
-            desde = Desplazar(perdida ? -3 : -30);
-            hasta = Desplazar(perdida ? 30 : 3);
-        }
-        var (items, total) = await repository.CoincidenciasAsync(origen, desde, hasta, query, ct);
+        var (items, total) = await repository.CoincidenciasAsync(origen, query, ct);
         var resultados = items.Select(p => {
             var campos = new List<string>();
             if (origen.Tamano.HasValue && p.Tamano == origen.Tamano) campos.Add("Tamaño");

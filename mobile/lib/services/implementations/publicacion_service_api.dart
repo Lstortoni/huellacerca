@@ -89,6 +89,19 @@ class PublicacionServiceApi implements PublicacionService {
             as Map<String, dynamic>,
       );
   @override
+  Future<PublicacionDto> editar(
+    String id,
+    EditarPublicacionRequest request,
+  ) async => PublicacionDto.fromJson(
+    await _auth.putProtegido('api/publicaciones/$id', request.toJson())
+        as Map<String, dynamic>,
+  );
+  @override
+  Future<PublicacionDto> reabrir(String id) async => PublicacionDto.fromJson(
+    await _auth.patchProtegido('api/publicaciones/$id/reabrir')
+        as Map<String, dynamic>,
+  );
+  @override
   Future<PublicacionDto> resolver(String id) async => PublicacionDto.fromJson(
     await _auth.patchProtegido('api/publicaciones/$id/resolver')
         as Map<String, dynamic>,

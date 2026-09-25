@@ -1,3 +1,4 @@
+import 'package:huella_cerca/core/network/api_exception.dart';
 import 'package:huella_cerca/models/pagina_dto.dart';
 import 'package:huella_cerca/models/foto_seleccionada.dart';
 import 'package:huella_cerca/models/publicacion_dto.dart';
@@ -18,8 +19,12 @@ Map<String, dynamic> publicacionJson({
   'descripcion': 'Perro marrón con collar azul.',
   'fechaSuceso': '2026-09-15',
   'fechaCreacion': '2026-09-15T15:00:00Z',
+  'localidadId': 'localidad-demo',
   'localidad': 'La Plata',
+  'provinciaId': 'provincia-demo',
   'provincia': 'Buenos Aires',
+  'version': 'version-1',
+  'fechaActualizacion': null,
   'zona': 'Plaza',
   'informacionContacto': '2215550000',
   'estado': estado,
@@ -116,6 +121,33 @@ class PublicacionServiceMock implements PublicacionService {
   Future<PublicacionDto> resolver(String id) async {
     resoluciones++;
     estado = 2;
+    return detalle(id);
+  }
+
+  EditarPublicacionRequest? editada;
+  int reaperturas = 0;
+
+  /// Simula que otra edición cambió el aviso: la API responde 409.
+  bool conflicto = false;
+  @override
+  Future<PublicacionDto> editar(
+    String id,
+    EditarPublicacionRequest request,
+  ) async {
+    if (conflicto) {
+      throw const ApiException(
+        'La publicación cambió. Volvé a cargarla antes de guardar.',
+        statusCode: 409,
+      );
+    }
+    editada = request;
+    return detalle(id);
+  }
+
+  @override
+  Future<PublicacionDto> reabrir(String id) async {
+    reaperturas++;
+    estado = 1;
     return detalle(id);
   }
 }

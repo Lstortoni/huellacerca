@@ -16,6 +16,7 @@ import 'pages/recomendar_servicio_page.dart';
 import 'services/contracts/publicacion_service.dart';
 import 'services/contracts/recomendacion_service.dart';
 import 'services/contracts/notificacion_service.dart';
+import 'models/publicacion_dto.dart';
 import 'pages/notificaciones_page.dart';
 import 'widgets/notificaciones_scope.dart';
 
@@ -118,6 +119,13 @@ class _HuellaCercaAppState extends State<HuellaCercaApp> {
         auth: getIt<AuthService>(),
         service: getIt<RecomendacionService>(),
         ubicacion: getIt<UbicacionService>(),
+      ),
+      // Argumento: el PublicacionDto a editar. Devuelve el aviso actualizado.
+      '/mascotas/editar': (context) => PublicarMascotaPage(
+        auth: getIt<AuthService>(),
+        service: getIt<PublicacionService>(),
+        ubicacion: getIt<UbicacionService>(),
+        edicion: ModalRoute.of(context)!.settings.arguments! as PublicacionDto,
       ),
       '/notificaciones': (_) => NotificacionesPage(
         auth: getIt<AuthService>(),

@@ -700,6 +700,55 @@ Sin body. Respuesta 204. Solo afecta las notificaciones del usuario del token.
 
 No se generan avisos entre publicaciones del mismo autor ni un envío inicial masivo de publicaciones históricas. No hay push Firebase ni campanita en la app en esta etapa.
 
+## Editar una publicación (solo API)
+
+1. Consultar `GET http://localhost:5080/api/publicaciones/PUBLICACION_ID` y copiar su `version`.
+2. Enviar `PUT http://localhost:5080/api/publicaciones/PUBLICACION_ID`, Authorization → Bearer Token del autor, Body → raw JSON:
+
+```json
+{
+  "version": "VERSION_DEVUELTA_POR_GET",
+  "tipoMascota": 1,
+  "nombreMascota": "Benji",
+  "descripcion": "Perro negro con collar, descripción corregida.",
+  "fechaSuceso": "2026-09-24",
+  "localidadId": "LOCALIDAD_ID",
+  "zona": "Los Hornos",
+  "informacionContacto": "2215551234",
+  "tamano": 2,
+  "raza": 2,
+  "pelaje": 1,
+  "colorPredominante": 1,
+  "colorOjos": 1
+}
+```
+
+Reemplazar los marcadores por GUID reales. Es un PUT completo: enviar todos los datos editables que se desean conservar; `null` limpia los campos opcionales. No enviar `tipoPublicacion`, `estado`, `mascoteroId`, `foto`, `fechaCreacion` ni otros campos del DTO de respuesta: son rechazados (400). Tipo de publicación, autor, estado, fecha de creación y foto se conservan.
+
+Respuesta 200: publicación actualizada con `fechaActualizacion` UTC y nueva `version`. Para la siguiente edición usar esa nueva versión. Si alguien guardó o resolvió el aviso desde que se leyó, devuelve 409: volver a consultar y revisar los cambios antes de reenviar. No reintentar automáticamente con otra versión.
+
+Validaciones compartidas con creación: extraviadas/encontradas requieren fecha pasada o actual; adopción usa `fechaSuceso: null`. Busco adoptar mantiene nombre null y permite zona vacía. Para `tipoMascota: 3`, enviar raza/pelaje/ojos null.
+
+Sin JWT → 401, otro autor → 403, ID inexistente → 404, datos/version faltante inválidos → 400, versión desactualizada → 409.
+
+Una edición de especie, características, localidad o fecha en un aviso activo deja una revisión pendiente; genera solo nuevas parejas de notificaciones. Cambiar contacto/nombre/descripción no encola. Editar uno resuelto no lo reabre ni encola revisión. La pantalla de edición Flutter queda pendiente.
+
+## Reabrir una publicación (solo API)
+
+`PATCH http://localhost:5080/api/publicaciones/PUBLICACION_ID/reabrir`
+
+Authorization → Bearer Token → accessToken del autor. Sin body.
+
+Devuelve 200 con el aviso actualizado: `estado: 1` (Activa), nueva `version` y `fechaActualizacion`. Conserva autor, ID, tipo, foto, fecha original y todos los datos. Solo cambia de Resuelta (2) a Activa (1). Si ya estaba activa, devuelve 200 sin cambiar versión/fecha ni encolar otra revisión.
+
+La reapertura guarda el cambio y una revisión de coincidencias en la misma transacción. Vuelve a participar de búsquedas de avisos activos y coincidencias; se generan notificaciones para nuevas parejas y se conservan las anteriores sin duplicarlas.
+
+Sin JWT → 401; otro autor → 403; ID inexistente → 404; cambio concurrente al guardar → 409 (recargar). No necesita una nueva migración ni nuevas variables. Flutter todavía no incluye el botón.
+
+Prueba: crear → resolver → reabrir → comprobar `estado: 1`; repetir reabrir conserva la versión; la versión previa a reabrir ya no sirve para editar. Funciona para los cuatro tipos de aviso. Reapertura no actualiza la fecha del suceso: para un hecho nuevo, crear otro aviso.
+
+Pruebas: `docker compose run --rm --no-deps huellacerca_tests python /tests/test_edicion_publicaciones.py`. Concurrencia y cola: `docker compose run --rm --no-deps huellacerca_tools run --project HuellaCerca.Notificaciones.Tests` (base temporal).
+
 ## Resumen de respuestas
 
 | Código | Significado en estas pruebas |

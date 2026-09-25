@@ -82,6 +82,55 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
     }
   }
 
+  Future<void> _reabrir() async {
+    if (_ocupado) return;
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Reabrir el aviso?'),
+        content: const Text(
+          'Tu aviso vuelve a estar activo y se buscarán coincidencias de nuevo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reabrir'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmar != true) return;
+    setState(() {
+      _ocupado = true;
+      _error = null;
+    });
+    try {
+      final result = await widget.service.reabrir(widget.id);
+      if (mounted) setState(() => _future = Future.value(result));
+    } catch (e) {
+      if (mounted) setState(() => _error = mensajeError(e));
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  /// La ruta la resuelve app.dart. Al volver usa el aviso guardado o, si se
+  /// canceló o hubo un conflicto, lo vuelve a consultar.
+  Future<void> _editar(PublicacionDto p) async {
+    final actualizado = await Navigator.of(context)
+        .pushNamed<Object?>('/mascotas/editar', arguments: p);
+    if (!mounted) return;
+    setState(() {
+      _future = actualizado is PublicacionDto
+          ? Future.value(actualizado)
+          : widget.service.detalle(widget.id);
+    });
+  }
+
   Future<void> _copiar(String texto) async {
     await Clipboard.setData(ClipboardData(text: texto));
     if (!mounted) return;
@@ -146,6 +195,11 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
           ),
           fila(Icons.location_on_rounded, '${p.localidad}, ${p.provincia}'),
           if (p.zona.isNotEmpty) fila(Icons.explore_rounded, 'Zona: ${p.zona}'),
+          if (p.fechaActualizacion case final editado?)
+            fila(
+              Icons.edit_calendar_rounded,
+              'Editado el ${fechaVisible(editado.toLocal())}',
+            ),
         ],
       ),
     );
@@ -228,15 +282,32 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
             : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 10,
           children: [
-            if (p.estado == 1)
+            if (p.estado == 1) ...[
+              OutlinedButton.icon(
+                onPressed: _ocupado ? null : () => _editar(p),
+                icon: const Icon(Icons.edit_rounded),
+                label: const Text('Editar aviso'),
+              ),
               FilledButton.icon(
                 onPressed: _ocupado ? null : _resolver,
                 icon: const Icon(Icons.check_circle_rounded),
                 label: Text(_ocupado ? 'Guardando…' : 'Marcar como resuelta'),
-              )
-            else
+              ),
+            ] else ...[
               const Text('Marcaste este aviso como resuelto.'),
+              FilledButton.icon(
+                onPressed: _ocupado ? null : _reabrir,
+                icon: const Icon(Icons.replay_rounded),
+                label: Text(_ocupado ? 'Guardando…' : 'Reabrir aviso'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _ocupado ? null : () => _editar(p),
+                icon: const Icon(Icons.edit_rounded),
+                label: const Text('Editar aviso'),
+              ),
+            ],
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -250,7 +321,8 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
       ),
       if (p.estado == 1)
         CoincidenciasPublicacion(
-          key: ValueKey(p.id),
+          // Nueva versión (edición o reapertura): se vuelven a consultar.
+          key: ValueKey('${p.id}:${p.version}'),
           publicacion: p,
           auth: widget.auth,
           service: widget.service,
@@ -306,11 +378,24 @@ class _PublicacionDetallePageState extends State<PublicacionDetallePage> {
                     atenuada: resuelta,
                   ),
                   const SizedBox(height: 14),
-                  Text(
-                    p.titulo,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          p.titulo,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      // Atajo visible: los botones de «Tu aviso» quedan abajo.
+                      if (esAutor)
+                        IconButton(
+                          tooltip: 'Editar aviso',
+                          onPressed: _ocupado ? null : () => _editar(p),
+                          icon: const Icon(Icons.edit_rounded),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Wrap(

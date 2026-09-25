@@ -32,6 +32,36 @@ public sealed class PublicacionService(IPublicacionRepository repository, IAuthR
 
     public async Task<PublicacionDto> CrearAsync(Guid mascoteroId, CrearPublicacionRequest request, CancellationToken ct)
     {
+        await ValidarDatosAsync(request, request.TipoPublicacion, ct);
+        var publicacion = new PublicacionMascota { MascoteroId = mascoteroId,
+            TipoPublicacion = (TipoPublicacionMascota)request.TipoPublicacion };
+        Aplicar(publicacion, request);
+        repository.Agregar(publicacion);
+        await repository.GuardarAsync(ct);
+        return await PorIdAsync(publicacion.Id, ct);
+    }
+
+    public async Task<PublicacionDto> EditarAsync(Guid id, Guid mascoteroId, EditarPublicacionRequest request, CancellationToken ct)
+    {
+        var p = await ObtenerAsync(id, ct);
+        if (p.MascoteroId != mascoteroId) throw new AppException(403, "Solo el autor puede editar esta publicación.");
+        await ValidarDatosAsync(request, (int)p.TipoPublicacion, ct);
+        if (request.Version != p.Version)
+            throw new AppException(409, "La publicación cambió. Volvé a cargarla antes de guardar.");
+        var fecha = (int)p.TipoPublicacion <= 2 ? request.FechaSuceso : null;
+        var revisar = p.Estado == EstadoPublicacionMascota.Activa &&
+            ((int)p.TipoMascota != request.TipoMascota || p.LocalidadId != request.LocalidadId
+            || p.FechaSuceso != fecha || (int?)p.Tamano != request.Tamano || (int?)p.Raza != request.Raza
+            || (int?)p.Pelaje != request.Pelaje || (int?)p.ColorPredominante != request.ColorPredominante
+            || (int?)p.ColorOjos != request.ColorOjos);
+        Aplicar(p, request);
+        p.FechaActualizacion = DateTime.UtcNow;
+        await repository.GuardarEdicionAsync(p, revisar, ct);
+        return await PorIdAsync(id, ct);
+    }
+
+    private async Task ValidarDatosAsync(DatosPublicacionRequest request, int tipoPublicacion, CancellationToken ct)
+    {
         Validar(request);
         if (request.TipoMascota == (int)TipoMascota.Otro &&
             (request.Raza.HasValue || request.Pelaje.HasValue || request.ColorOjos.HasValue))
@@ -40,34 +70,30 @@ public sealed class PublicacionService(IPublicacionRepository repository, IAuthR
             throw new AppException(400, "Describí la mascota y lo sucedido en al menos 10 caracteres.");
         // FechaSuceso no contiene hora; se compara con el día actual en Argentina.
         var hoy = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "America/Argentina/Buenos_Aires"));
-        var requiereFecha = request.TipoPublicacion is 1 or 2;
+        var requiereFecha = tipoPublicacion is 1 or 2;
         if (requiereFecha && (request.FechaSuceso is null || request.FechaSuceso == DateOnly.MinValue || request.FechaSuceso > hoy))
             throw new AppException(400, "Indicá una fecha del suceso válida, que no sea futura.");
-        if (request.TipoPublicacion != 4 && string.IsNullOrWhiteSpace(request.Zona))
+        if (tipoPublicacion != 4 && string.IsNullOrWhiteSpace(request.Zona))
             throw new AppException(400, "Indicá la zona aproximada.");
         if (!await ubicaciones.LocalidadActivaAsync(request.LocalidadId, ct))
             throw new AppException(400, "Seleccioná una localidad activa.");
 
-        var publicacion = new PublicacionMascota
-        {
-            MascoteroId = mascoteroId,
-            TipoPublicacion = (TipoPublicacionMascota)request.TipoPublicacion,
-            TipoMascota = (TipoMascota)request.TipoMascota,
-            Tamano = (TamanoMascota?)request.Tamano,
-            Raza = (ClasificacionRaza?)request.Raza,
-            Pelaje = (TipoPelaje?)request.Pelaje,
-            ColorPredominante = (ColorMascota?)request.ColorPredominante,
-            ColorOjos = (ColorOjosMascota?)request.ColorOjos,
-            NombreMascota = request.TipoPublicacion == 4 || string.IsNullOrWhiteSpace(request.NombreMascota) ? null : request.NombreMascota.Trim(),
-            Descripcion = request.Descripcion.Trim(),
-            FechaSuceso = requiereFecha ? request.FechaSuceso : null,
-            LocalidadId = request.LocalidadId,
-            Zona = request.Zona?.Trim() ?? "",
-            InformacionContacto = request.InformacionContacto.Trim()
-        };
-        repository.Agregar(publicacion);
-        await repository.GuardarAsync(ct);
-        return await PorIdAsync(publicacion.Id, ct);
+    }
+
+    private static void Aplicar(PublicacionMascota p, DatosPublicacionRequest request)
+    {
+        p.TipoMascota = (TipoMascota)request.TipoMascota;
+        p.Tamano = (TamanoMascota?)request.Tamano;
+        p.Raza = (ClasificacionRaza?)request.Raza;
+        p.Pelaje = (TipoPelaje?)request.Pelaje;
+        p.ColorPredominante = (ColorMascota?)request.ColorPredominante;
+        p.ColorOjos = (ColorOjosMascota?)request.ColorOjos;
+        p.NombreMascota = (int)p.TipoPublicacion == 4 || string.IsNullOrWhiteSpace(request.NombreMascota) ? null : request.NombreMascota.Trim();
+        p.Descripcion = request.Descripcion.Trim();
+        p.FechaSuceso = (int)p.TipoPublicacion <= 2 ? request.FechaSuceso : null;
+        p.LocalidadId = request.LocalidadId;
+        p.Zona = request.Zona?.Trim() ?? "";
+        p.InformacionContacto = request.InformacionContacto.Trim();
     }
 
     public async Task<PublicacionDto> PorIdAsync(Guid id, CancellationToken ct) => ToDto(await ObtenerAsync(id, ct));
@@ -94,6 +120,19 @@ public sealed class PublicacionService(IPublicacionRepository repository, IAuthR
 
     private async Task<PublicacionMascota> ObtenerAsync(Guid id, CancellationToken ct) =>
         await repository.PorIdAsync(id, ct) ?? throw new AppException(404, "Publicación no encontrada.");
+
+    public async Task<PublicacionDto> ReabrirAsync(Guid id, Guid mascoteroId, CancellationToken ct)
+    {
+        var p = await ObtenerAsync(id, ct);
+        if (p.MascoteroId != mascoteroId)
+            throw new AppException(403, "Solo el autor puede reabrir esta publicación.");
+        // Repetir la petición sobre un aviso activo no modifica versión ni vuelve a encolar.
+        if (p.Estado == EstadoPublicacionMascota.Activa) return ToDto(p);
+        p.Estado = EstadoPublicacionMascota.Activa;
+        p.FechaActualizacion = DateTime.UtcNow;
+        await repository.GuardarEdicionAsync(p, revisarCoincidencias: true, ct);
+        return await PorIdAsync(id, ct);
+    }
 
     public async Task<PaginaDto<CoincidenciaPublicacionDto>> CoincidenciasAsync(Guid id, Guid mascoteroId, CoincidenciasQuery query, CancellationToken ct)
     {
@@ -129,5 +168,6 @@ public sealed class PublicacionService(IPublicacionRepository repository, IAuthR
         p.LocalidadId, p.Localidad.Nombre, p.Localidad.ProvinciaId, p.Localidad.Provincia.Nombre,
         p.Zona, p.InformacionContacto, p.FechaCreacion, (int)p.Estado,
         p.Foto is null ? null : new FotoPublicacionDto(p.Foto.Id, FotoPublicacionDto.Ruta(p.Id, p.Foto.Id)),
-        (int?)p.Tamano, (int?)p.Raza, (int?)p.Pelaje, (int?)p.ColorPredominante, (int?)p.ColorOjos);
+        (int?)p.Tamano, (int?)p.Raza, (int?)p.Pelaje, (int?)p.ColorPredominante, (int?)p.ColorOjos,
+        p.FechaActualizacion, p.Version);
 }

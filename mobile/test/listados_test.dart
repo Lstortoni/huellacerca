@@ -152,6 +152,21 @@ void main() {
       await tester.ensureVisible(find.text('Información de contacto'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+      // Formulario en modo edición: tipo fijo y ubicación precargada.
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicarMascotaPage(
+            auth: auth,
+            service: PublicacionServiceMock(),
+            ubicacion: UbicacionServiceMock(),
+            edicion: PublicacionDto.fromJson(publicacionJson()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Información de contacto'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
       // Detalle visto por su autor: controles de foto y sección «Tu aviso».
       await tester.pumpWidget(
         MaterialApp(

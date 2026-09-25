@@ -65,9 +65,30 @@ public sealed class PublicacionRepository(AppDbContext db) : IPublicacionReposit
 
     public async Task GuardarAsync(CancellationToken ct)
     {
+        foreach (var entry in db.ChangeTracker.Entries<PublicacionMascota>().Where(x => x.State == EntityState.Modified))
+            entry.Entity.Version = Guid.NewGuid();
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateConcurrencyException)
         { throw new AppException(409, "La publicación cambió o fue eliminada. Volvé a consultar."); }
+    }
+
+    public async Task GuardarEdicionAsync(PublicacionMascota publicacion, bool revisarCoincidencias, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // Mismo bloqueo que usa el worker: no puede borrar el pendiente mientras lo renovamos.
+        await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(72409101)", ct);
+        await GuardarAsync(ct);
+        if (revisarCoincidencias)
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO "NotificacionesPendientes" ("PublicacionId", "FechaCreacion")
+                VALUES ({publicacion.Id}, {DateTime.UtcNow})
+                ON CONFLICT ("PublicacionId") DO NOTHING
+                """, ct);
+        }
+        await tx.CommitAsync(ct);
+        // La respuesta debe cargar también la nueva localidad/provincia, no la navegación anterior.
+        db.ChangeTracker.Clear();
     }
 
     public async Task<(IReadOnlyList<PublicacionMascota> Items, int Total)> CoincidenciasAsync(

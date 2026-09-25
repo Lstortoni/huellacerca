@@ -10,4 +10,5 @@ public interface IPublicacionRepository
     Task<PublicacionMascota?> PorIdAsync(Guid id, CancellationToken ct);
     Task<(IReadOnlyList<PublicacionMascota> Items, int Total)> BuscarAsync(PublicacionesQuery query, CancellationToken ct);
     Task GuardarAsync(CancellationToken ct);
+    Task GuardarEdicionAsync(PublicacionMascota publicacion, bool revisarCoincidencias, CancellationToken ct);
 }

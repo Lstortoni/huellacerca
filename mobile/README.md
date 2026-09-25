@@ -232,6 +232,10 @@ Desde **Servicios recomendados**, la ficha es pública y de solo lectura, inclus
 
 El listado público excluye prestadores con cero recomendaciones. Esas fichas permanecen en la búsqueda de similares del recorrido para recomendar.
 
+## Editar y reabrir avisos
+
+En el detalle de un aviso propio, el lápiz junto al nombre o "Editar aviso" abren el formulario de Publicar con los datos cargados (`/mascotas/editar`). El tipo de aviso no se puede cambiar y la foto se gestiona desde el detalle. Si el aviso cambió mientras se editaba, la API responde 409 y la app vuelve al detalle actualizado. Un aviso resuelto ofrece "Reabrir aviso". Detalle en [docs/publicaciones-mascotas.md](../docs/publicaciones-mascotas.md).
+
 ## Notificaciones
 
 Con sesión, la barra muestra una campanita con las notificaciones sin leer (posibles coincidencias con tus avisos). El contador se consulta cada 2 minutos mientras la app está abierta, y además al iniciar sesión, al volver a la app y al abrir la página; en segundo plano no consulta. Tocar una notificación la marca como leída y abre el aviso que coincide; "Ver mi aviso" abre el propio.

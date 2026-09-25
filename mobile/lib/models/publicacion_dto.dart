@@ -78,8 +78,14 @@ class PublicacionDto {
           ? null
           : DateTime.parse(j['fechaSuceso'] as String),
       fechaCreacion = DateTime.parse(j['fechaCreacion'] as String),
+      localidadId = j['localidadId'] as String,
       localidad = j['localidad'] as String,
+      provinciaId = j['provinciaId'] as String,
       provincia = j['provincia'] as String,
+      version = j['version'] as String,
+      fechaActualizacion = j['fechaActualizacion'] == null
+          ? null
+          : DateTime.parse(j['fechaActualizacion'] as String),
       zona = j['zona'] as String,
       informacionContacto = j['informacionContacto'] as String,
       estado = j['estado'] as int;
@@ -87,10 +93,16 @@ class PublicacionDto {
       mascoteroId,
       autor,
       descripcion,
+      localidadId,
       localidad,
+      provinciaId,
       provincia,
       zona,
       informacionContacto;
+
+  /// Token de concurrencia: se envía al editar; la API rechaza versiones viejas.
+  final String version;
+  final DateTime? fechaActualizacion;
   final String? nombreMascota;
   final String? fotoUrl;
   final int tipoPublicacion, tipoMascota, estado;
@@ -201,5 +213,53 @@ class CrearPublicacionRequest {
     if (pelaje != null) 'pelaje': pelaje,
     if (colorPredominante != null) 'colorPredominante': colorPredominante,
     if (colorOjos != null) 'colorOjos': colorOjos,
+  };
+}
+
+/// Cuerpo del PUT. La API rechaza campos desconocidos: no incluye el tipo de
+/// aviso (no se puede cambiar) y sí la [version] recibida en el detalle.
+/// Las características se envían siempre: null borra el valor anterior.
+class EditarPublicacionRequest {
+  const EditarPublicacionRequest({
+    required this.tipoPublicacion,
+    required this.version,
+    required this.tipoMascota,
+    this.nombreMascota,
+    required this.descripcion,
+    this.fechaSuceso,
+    required this.localidadId,
+    required this.zona,
+    required this.informacionContacto,
+    this.tamano,
+    this.raza,
+    this.pelaje,
+    this.colorPredominante,
+    this.colorOjos,
+  });
+
+  /// Solo decide qué campos aplican; no se envía.
+  final int tipoPublicacion;
+  final String version;
+  final int tipoMascota;
+  final int? tamano, raza, pelaje, colorPredominante, colorOjos;
+  final String? nombreMascota;
+  final String descripcion, localidadId, zona, informacionContacto;
+  final DateTime? fechaSuceso;
+  Map<String, Object?> toJson() => {
+    'version': version,
+    'tipoMascota': tipoMascota,
+    'nombreMascota': tipoPublicacion == 4 ? null : nombreMascota,
+    'descripcion': descripcion,
+    'fechaSuceso': tipoPublicacion <= 2 && fechaSuceso != null
+        ? fechaApi(fechaSuceso!)
+        : null,
+    'localidadId': localidadId,
+    'zona': zona,
+    'informacionContacto': informacionContacto,
+    'tamano': tamano,
+    'raza': raza,
+    'pelaje': pelaje,
+    'colorPredominante': colorPredominante,
+    'colorOjos': colorOjos,
   };
 }

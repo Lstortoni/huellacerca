@@ -36,4 +36,9 @@ public sealed class PublicacionesController(IPublicacionService service) : Contr
     public Task<PublicacionDto> Resolver(Guid id, CancellationToken ct) => service.ResolverAsync(id, MascoteroId, ct);
 
     private Guid MascoteroId => Guid.Parse(User.FindFirst("mascoteroId")!.Value);
+    [HttpPatch("{id:guid}/reabrir"), Authorize]
+    public Task<PublicacionDto> Reabrir(Guid id, CancellationToken ct) => service.ReabrirAsync(id, MascoteroId, ct);
+    [HttpPut("{id:guid}"), Authorize]
+    public Task<PublicacionDto> Editar(Guid id, EditarPublicacionRequest request, CancellationToken ct) =>
+        service.EditarAsync(id, MascoteroId, request, ct);
 }

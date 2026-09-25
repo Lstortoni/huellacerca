@@ -22,6 +22,12 @@ abstract class PublicacionService {
   Future<PublicacionDto> crear(CrearPublicacionRequest request);
   Future<PublicacionDto> resolver(String id);
 
+  /// Solo el autor. Si el aviso cambió desde que se cargó, la API devuelve 409.
+  Future<PublicacionDto> editar(String id, EditarPublicacionRequest request);
+
+  /// Vuelve a activar un aviso resuelto y a buscar coincidencias.
+  Future<PublicacionDto> reabrir(String id);
+
   /// Difunde el aviso con su texto y, si tiene, su foto.
   Future<void> compartir(PublicacionDto publicacion);
 

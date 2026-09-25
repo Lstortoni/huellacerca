@@ -57,6 +57,27 @@ Para extravío/hallazgo, el hallazgo debe estar entre 3 días antes y 30 días d
 
 Flutter consulta debajo del detalle de los avisos propios activos, después de publicar y al reabrir. Muestra 5 candidatos y permite ver más en páginas de 10. Indica en qué características coinciden y permite abrir el detalle para contactar al autor. Las coincidencias son sugerencias, no una confirmación de identidad ni un reemplazo de la búsqueda manual.
 
-Implementar almacenamiento y carga/consulta de imágenes opcionales, con validación de formato/tamaño y permisos. Edición, eliminación y reapertura de avisos no están incluidas en este bloque.
+Fotos, edición y reapertura están implementadas en la API. La eliminación de avisos sigue pendiente.
+
+## Edición (API)
+
+Reapertura: `PATCH /api/publicaciones/{id}/reabrir`, sin body, solo autor. `PublicacionService.ReabrirAsync` pasa Resuelta a Activa, actualiza fecha/versión y reutiliza `GuardarEdicionAsync` para guardar estado y tarea de coincidencias atómicamente. Un aviso ya activo se devuelve sin modificaciones. Conserva fechas originales, datos y foto; no requiere otra migración. Pruebas HTTP de los cuatro tipos en `test_edicion_publicaciones.py`.
+
+`PUT /api/publicaciones/{id}` requiere JWT del autor y un `EditarPublicacionRequest` con todos los datos editables y la `version` recibida en GET. No admite tipo de publicación, autor, estado, fechas administrativas ni foto en el cuerpo. Campos desconocidos → 400. Las validaciones se comparten con creación mediante `DatosPublicacionRequest` y `ValidarDatosAsync`.
+
+El servicio modifica nombre, descripción, especie, características, fecha del suceso, localidad, zona y contacto. Conserva ID, fecha de creación, autor, tipo de aviso, estado y referencia de foto. Devuelve DTO actualizado con localidad/provincia recargadas. Se puede editar un aviso resuelto sin reabrirlo.
+
+Migración `20260925181125_EdicionPublicacion`: agrega `FechaActualizacion` UTC nullable y `Version` UUID como token de concurrencia EF. Avisos previos comienzan con versión cero; sigue siendo válida hasta el primer cambio. Crear asigna una versión nueva. Editar y resolver cambian la versión; una edición con versión anterior o un conflicto de guardado devuelve 409. Flutter sigue siendo compatible con el POST existente; la respuesta suma campos.
+
+## Edición y reapertura (Flutter)
+
+- El detalle muestra al autor un lápiz junto al nombre y, en «Tu aviso», "Editar aviso" (activos y resueltos) y "Reabrir aviso" (resueltos, con confirmación). La línea "Editado el …" usa `fechaActualizacion`.
+- La edición reutiliza `PublicarMascotaPage` con `edicion`: precarga datos y ubicación (`CampoUbicacion.localidadInicial`), deja fijo el tipo y no gestiona la foto, que se cambia desde el detalle. La ruta `/mascotas/editar` se resuelve en `app.dart` con el `PublicacionDto` como argumento.
+- `EditarPublicacionRequest` (Dart) envía `version` y omite `tipoPublicacion`; las características viajan siempre, con `null` para borrarlas. Un 409 muestra "El aviso cambió" y vuelve al detalle, que se recarga. Salir con cambios sin guardar pide confirmación.
+- Pruebas: `mobile/test/edicion_aviso_test.dart`.
+
+Si cambian especie, localidad, fecha o características en un aviso activo, se inserta una revisión pendiente si aún no existe. Contacto/nombre/descripción no generan revisión. La edición y su pendiente se confirman en una transacción y comparten el bloqueo de procesamiento con el worker, evitando perder la tarea si este la estaba eliminando. Las notificaciones previas se conservan como historial y las parejas ya notificadas no se repiten.
+
+Ejemplo JSON y respuestas en [PruebasApi.md](../PruebasApi.md). Pruebas HTTP: `scripts/test_edicion_publicaciones.py`; concurrencia, atomicidad y coordinación con el worker: `HuellaCerca.Notificaciones.Tests` (base temporal).
 
 La migración BuscoAdoptarFechaOpcional habilita el tipo 4 y FechaSuceso nullable. Fue generada con EF y aplicada mediante Docker Compose; API reconstruida. Pruebas HTTP de los cuatro tipos aprobadas.

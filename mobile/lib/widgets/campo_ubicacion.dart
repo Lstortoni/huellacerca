@@ -15,7 +15,12 @@ class CampoUbicacion extends StatefulWidget {
     this.obligatorio = false,
     this.enabled = true,
     this.onDescripcion,
+    this.localidadInicial,
   });
+
+  /// Selección precargada, por ejemplo al editar un aviso. Su provincia se
+  /// toma de [LocalidadDto.provinciaId].
+  final LocalidadDto? localidadInicial;
   final UbicacionService service;
   final void Function(String? provinciaId, String? localidadId) onChanged;
 
@@ -36,6 +41,8 @@ class _CampoUbicacionState extends State<CampoUbicacion> {
   void initState() {
     super.initState();
     _future = widget.service.getProvincias();
+    _localidad = widget.localidadInicial;
+    _provincia = _localidad?.provinciaId;
   }
 
   @override
@@ -59,7 +66,10 @@ class _CampoUbicacionState extends State<CampoUbicacion> {
           }
           if (!snapshot.hasData) return const LinearProgressIndicator();
           return DropdownButtonFormField<String>(
-            initialValue: _provincia,
+            // Una provincia precargada que ya no está en el catálogo queda sin elegir.
+            initialValue: snapshot.data!.any((p) => p.id == _provincia)
+                ? _provincia
+                : null,
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'Provincia'),
             items: [

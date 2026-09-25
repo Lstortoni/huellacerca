@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 
+import '../core/network/api_exception.dart';
 import '../core/theme/colores_app.dart';
 import '../models/foto_seleccionada.dart';
+import '../models/localidad_dto.dart';
 import '../models/publicacion_dto.dart';
 import '../services/contracts/auth_service.dart';
 import '../services/contracts/publicacion_service.dart';
@@ -18,16 +21,20 @@ import 'publicacion_detalle_page.dart';
 
 /// Formulario en secciones. El tipo de aviso decide qué campos se piden:
 /// Busco adoptar no usa nombre ni fecha; las adopciones no usan fecha.
+/// Con [edicion] precarga el aviso, deja fijo el tipo, no gestiona la foto
+/// (se cambia desde el detalle) y al guardar vuelve con el aviso actualizado.
 class PublicarMascotaPage extends StatefulWidget {
   const PublicarMascotaPage({
     super.key,
     required this.auth,
     required this.service,
     required this.ubicacion,
+    this.edicion,
   });
   final AuthService auth;
   final PublicacionService service;
   final UbicacionService ubicacion;
+  final PublicacionDto? edicion;
   @override
   State<PublicarMascotaPage> createState() => _PublicarMascotaPageState();
 }
@@ -65,13 +72,129 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
 
   late Future<List<CaracteristicaMascotaDto>> _opciones;
   final Map<String, int> _caracteristicas = {};
+
+  bool get _editando => widget.edicion != null;
+  LocalidadDto? _localidadInicial;
+  // Datos al abrir la edición: permiten saber si hay cambios sin guardar.
+  Map<String, Object?>? _inicial;
+  bool _saliendo = false;
+
   @override
   void initState() {
     super.initState();
+    if (widget.edicion case final p?) {
+      _tipo = p.tipoPublicacion;
+      _mascota = p.tipoMascota;
+      _nombre.text = p.nombreMascota ?? '';
+      _descripcion.text = p.descripcion;
+      _zona.text = p.zona;
+      _contacto.text = p.informacionContacto;
+      _fecha = p.fechaSuceso;
+      _localidad = p.localidadId;
+      _localidadInicial = LocalidadDto(
+        p.localidadId,
+        p.localidad,
+        p.provinciaId,
+      );
+      _caracteristicas.addAll(p.caracteristicas);
+      _inicial = _solicitudEdicion().toJson();
+    }
     _opciones = _cargarOpciones();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _elegirFoto(recuperar: true);
-    });
+    if (!_editando) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _elegirFoto(recuperar: true);
+      });
+    }
+  }
+
+  EditarPublicacionRequest _solicitudEdicion() => EditarPublicacionRequest(
+    tipoPublicacion: _tipo,
+    version: widget.edicion!.version,
+    tipoMascota: _mascota,
+    nombreMascota: _nombre.text.trim().isEmpty ? null : _nombre.text.trim(),
+    descripcion: _descripcion.text.trim(),
+    fechaSuceso: _fecha,
+    localidadId: _localidad ?? '',
+    zona: _zona.text.trim(),
+    informacionContacto: _contacto.text.trim(),
+    tamano: _caracteristicas['tamano'],
+    raza: _caracteristicas['raza'],
+    pelaje: _caracteristicas['pelaje'],
+    colorPredominante: _caracteristicas['colorPredominante'],
+    colorOjos: _caracteristicas['colorOjos'],
+  );
+
+  bool _huboCambios() =>
+      _inicial != null && !mapEquals(_solicitudEdicion().toJson(), _inicial);
+
+  Future<void> _guardarEdicion() async {
+    try {
+      final p = await widget.service.editar(
+        widget.edicion!.id,
+        _solicitudEdicion(),
+      );
+      if (!mounted) return;
+      _saliendo = true;
+      Navigator.of(context).pop(p);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.statusCode == 409) {
+        await _avisarConflicto();
+      } else {
+        setState(() => _error = e.message);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = mensajeError(e));
+    }
+  }
+
+  /// Otra edición (por ejemplo, desde otro teléfono) cambió el aviso: no se
+  /// pisan esos datos; se vuelve al detalle, que se recarga.
+  Future<void> _avisarConflicto() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('El aviso cambió'),
+        content: const Text(
+          'Se modificó mientras lo editabas. Volvé a abrirlo para ver los datos actuales.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Volver al aviso'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    _saliendo = true;
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _alSalir() async {
+    final descartar =
+        !_huboCambios() ||
+        await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('¿Descartar los cambios?'),
+                content: const Text('Los cambios que hiciste no se guardan.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Seguir editando'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Descartar'),
+                  ),
+                ],
+              ),
+            ) ==
+            true;
+    if (!mounted || !descartar) return;
+    _saliendo = true;
+    Navigator.of(context).pop();
   }
 
   Future<List<CaracteristicaMascotaDto>> _cargarOpciones() {
@@ -110,6 +233,11 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
       _ocupado = true;
       _error = null;
     });
+    if (_editando) {
+      await _guardarEdicion();
+      if (mounted) setState(() => _ocupado = false);
+      return;
+    }
     try {
       final p = await widget.service.crear(
         CrearPublicacionRequest(
@@ -164,7 +292,10 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
         CircleAvatar(
           radius: 24,
           backgroundColor: Colors.white.withValues(alpha: 0.18),
-          child: const Icon(Icons.campaign_rounded, color: Colors.white),
+          child: Icon(
+            _editando ? Icons.edit_rounded : Icons.campaign_rounded,
+            color: Colors.white,
+          ),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -172,14 +303,16 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Contale a la comunidad',
+                _editando ? 'Editá tu aviso' : 'Contale a la comunidad',
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
-                'Cuantos más datos, más fácil es ayudar.',
+                _editando
+                    ? 'La foto se cambia desde el detalle del aviso.'
+                    : 'Cuantos más datos, más fácil es ayudar.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.white.withValues(alpha: 0.85),
                 ),
@@ -191,7 +324,20 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
     ),
   );
 
-  Widget _seccionTipo() => SeccionFormulario(
+  Widget _seccionTipo() => _editando
+      ? SeccionFormulario(
+          titulo: 'Tipo de aviso',
+          subtitulo: 'No se puede cambiar. Si te equivocaste de tipo, publicá un aviso nuevo.',
+          child: OpcionTipoAviso(
+            tipo: _tipo,
+            texto: tiposPublicacion[_tipo] ?? '',
+            seleccionado: true,
+            onTap: null,
+          ),
+        )
+      : _seccionElegirTipo();
+
+  Widget _seccionElegirTipo() => SeccionFormulario(
     titulo: '¿Qué querés publicar?',
     child: KeyedSubtree(
       key: const ValueKey('campo:¿Qué querés publicar?'),
@@ -319,8 +465,7 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
                 : (s) => _cambiarMascota(s.first),
           ),
         ),
-        const SizedBox(height: 14),
-        _selectorFoto(theme),
+        if (!_editando) ...[const SizedBox(height: 14), _selectorFoto(theme)],
         if (_errorFoto != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),
@@ -460,6 +605,7 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
           service: widget.ubicacion,
           obligatorio: true,
           enabled: !_ocupado,
+          localidadInicial: _localidadInicial,
           onChanged: (_, l) => _localidad = l,
         ),
         const SizedBox(height: 14),
@@ -552,8 +698,15 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
                 FilledButton.icon(
                   style: ColoresApp.accionPrincipal,
                   onPressed: _ocupado ? null : _publicar,
-                  icon: const Icon(Icons.campaign_rounded),
-                  label: Text(_ocupado ? 'Publicando…' : 'Publicar aviso'),
+                  icon: Icon(
+                    _editando ? Icons.save_rounded : Icons.campaign_rounded,
+                  ),
+                  label: Text(switch ((_editando, _ocupado)) {
+                    (true, true) => 'Guardando…',
+                    (true, false) => 'Guardar cambios',
+                    (false, true) => 'Publicando…',
+                    (false, false) => 'Publicar aviso',
+                  }),
                 ),
               ],
             ),
@@ -566,10 +719,24 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Al editar, salir con cambios sin guardar pide confirmación.
+    return PopScope(
+      canPop: !_editando,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_saliendo) _alSalir();
+      },
+      child: _pagina(theme),
+    );
+  }
+
+  Widget _pagina(ThemeData theme) {
     return ListenableBuilder(
       listenable: widget.auth,
       builder: (context, _) => Scaffold(
-        appBar: BarraSuperior(auth: widget.auth, titulo: 'Publicar un aviso'),
+        appBar: BarraSuperior(
+          auth: widget.auth,
+          titulo: _editando ? 'Editar aviso' : 'Publicar un aviso',
+        ),
         bottomNavigationBar: widget.auth.autenticado && !widget.auth.restaurando
             ? _barraPublicar(theme)
             : null,

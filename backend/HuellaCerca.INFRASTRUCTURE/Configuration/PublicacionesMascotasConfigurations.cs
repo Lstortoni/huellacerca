@@ -21,6 +21,7 @@ public sealed class PublicacionMascotaConfiguration : IEntityTypeConfiguration<P
             t.HasCheckConstraint("CK_publicaciones_caracteristicas_otro", "\"TipoMascota\" <> 3 OR (\"Raza\" IS NULL AND \"Pelaje\" IS NULL AND \"ColorOjos\" IS NULL)");
         });
         b.HasKey(x => x.Id);
+        b.Property(x => x.Version).IsConcurrencyToken();
         b.Property(x => x.NombreMascota).HasMaxLength(100);
         b.Property(x => x.Descripcion).HasMaxLength(3000).IsRequired();
         b.Property(x => x.Zona).HasMaxLength(250).IsRequired();

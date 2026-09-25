@@ -19,6 +19,8 @@ public sealed class PublicacionMascota
     public string Zona { get; set; } = "";
     public string InformacionContacto { get; set; } = "";
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+    public DateTime? FechaActualizacion { get; set; }
+    public Guid Version { get; set; } = Guid.NewGuid();
     public EstadoPublicacionMascota Estado { get; set; } = EstadoPublicacionMascota.Activa;
     public Mascotero Mascotero { get; set; } = null!;
     public Localidad Localidad { get; set; } = null!;

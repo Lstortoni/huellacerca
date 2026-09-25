@@ -2,9 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HuellaCerca.CONTRACT.Publicaciones;
 
-public sealed class CrearPublicacionRequest
+public class DatosPublicacionRequest
 {
-    [Range(1, 4)] public int TipoPublicacion { get; set; }
     [Range(1, 3)] public int TipoMascota { get; set; }
     [Range(1, 3)] public int? Tamano { get; set; }
     [Range(1, 2)] public int? Raza { get; set; }
@@ -17,6 +16,17 @@ public sealed class CrearPublicacionRequest
     public Guid LocalidadId { get; set; }
     [StringLength(250)] public string? Zona { get; set; }
     [Required, StringLength(500)] public string InformacionContacto { get; set; } = "";
+}
+
+public sealed class CrearPublicacionRequest : DatosPublicacionRequest
+{
+    [Range(1, 4)] public int TipoPublicacion { get; set; }
+}
+
+[System.Text.Json.Serialization.JsonUnmappedMemberHandling(System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow)]
+public sealed class EditarPublicacionRequest : DatosPublicacionRequest
+{
+    [Required] public Guid? Version { get; set; }
 }
 
 public sealed class PublicacionesQuery : IValidatableObject
@@ -51,7 +61,8 @@ public sealed record PublicacionDto(Guid Id, Guid MascoteroId, string Autor, int
     int TipoMascota, string? NombreMascota, string Descripcion, DateOnly? FechaSuceso,
     Guid LocalidadId, string Localidad, Guid ProvinciaId, string Provincia, string Zona,
     string InformacionContacto, DateTime FechaCreacion, int Estado, FotoPublicacionDto? Foto,
-    int? Tamano, int? Raza, int? Pelaje, int? ColorPredominante, int? ColorOjos);
+    int? Tamano, int? Raza, int? Pelaje, int? ColorPredominante, int? ColorOjos,
+    DateTime? FechaActualizacion = null, Guid Version = default);
 
 public sealed record OpcionCaracteristicaDto(int Id, string Nombre);
 public sealed class CoincidenciasQuery

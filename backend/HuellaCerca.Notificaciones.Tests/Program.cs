@@ -1,4 +1,5 @@
 using HuellaCerca.CONTRACT.Notificaciones;
+using HuellaCerca.CONTRACT.Publicaciones;
 using HuellaCerca.INFRASTRUCTURE.Data;
 using HuellaCerca.INFRASTRUCTURE.Repositories;
 using HuellaCerca.INTERFACES;
@@ -141,6 +142,82 @@ try
     await using (var db = Context())
         Check(!await db.PublicacionesMascotas.AnyAsync(x => x.Id == rollback.Id)
             && !await db.NotificacionesPendientes.AnyAsync(x => x.PublicacionId == rollback.Id), "Aviso y tarea se guardan atómicamente");
+    // Edición con contexto nuevo por solicitud; la API usa el mismo servicio.
+    PublicacionService Publicaciones(AppDbContext db) => new(new PublicacionRepository(db), new AuthRepository(db));
+    EditarPublicacionRequest Editar(PublicacionDto p) => new() {
+        Version = p.Version, TipoMascota = p.TipoMascota, Tamano = p.Tamano, Raza = p.Raza,
+        Pelaje = p.Pelaje, ColorPredominante = p.ColorPredominante, ColorOjos = p.ColorOjos,
+        NombreMascota = p.NombreMascota, Descripcion = p.Descripcion, LocalidadId = p.LocalidadId,
+        Zona = p.Zona, InformacionContacto = p.InformacionContacto, FechaSuceso = p.FechaSuceso
+    };
+    PublicacionDto original;
+    await using (var db = Context()) original = await Publicaciones(db).PorIdAsync(origen.Id, ct);
+    var edit = Editar(original);
+    edit.InformacionContacto = "Contacto corregido";
+    PublicacionDto updated;
+    await using (var db = Context())
+    {
+        updated = await Publicaciones(db).EditarAsync(origen.Id, a.Id, edit, ct);
+        Check(updated.Version != original.Version && updated.FechaActualizacion != null
+            && updated.FechaCreacion == original.FechaCreacion, "Edición conserva creación y cambia versión/actualización");
+        Check(!await db.NotificacionesPendientes.AnyAsync(), "Editar contacto no encola revisión");
+    }
+    await using (var db = Context())
+    {
+        try { await Publicaciones(db).EditarAsync(origen.Id, a.Id, edit, ct); throw new Exception("Aceptó edición vieja"); }
+        catch (AppException ex) when (ex.StatusCode == 409) { Console.WriteLine("OK: versión vieja rechazada"); }
+    }
+    edit = Editar(updated); edit.Tamano = 2;
+    await using (var db = Context())
+    {
+        updated = await Publicaciones(db).EditarAsync(origen.Id, a.Id, edit, ct);
+        Check(await db.NotificacionesPendientes.CountAsync() == 1, "Editar características encola revisión");
+    }
+    edit = Editar(updated); edit.Tamano = 3;
+    await using (var db = Context())
+    {
+        updated = await Publicaciones(db).EditarAsync(origen.Id, a.Id, edit, ct);
+        Check(await db.NotificacionesPendientes.CountAsync() == 1, "Editar con tarea pendiente no la duplica");
+    }
+    await Drenar();
+    await using (var db = Context())
+        Check(await db.Notificaciones.CountAsync() == 412, "Edición sin candidatos nuevos conserva historial sin duplicados");
+    // Dos solicitudes cargaron la misma versión antes de guardar.
+    await using (var db1 = Context())
+    await using (var db2 = Context())
+    {
+        var repo1 = new PublicacionRepository(db1); var repo2 = new PublicacionRepository(db2);
+        var p1 = (await repo1.PorIdAsync(origen.Id, ct))!;
+        var p2 = (await repo2.PorIdAsync(origen.Id, ct))!;
+        p1.Descripcion = "Primera edición concurrente";
+        p2.Descripcion = "Segunda edición concurrente";
+        await repo1.GuardarEdicionAsync(p1, false, ct);
+        try { await repo2.GuardarEdicionAsync(p2, true, ct); throw new Exception("Pisó edición concurrente"); }
+        catch (AppException ex) when (ex.StatusCode == 409) { Console.WriteLine("OK: EF evita pérdida de actualización concurrente"); }
+    }
+    // Simula al worker borrando la tarea mientras una edición espera su bloqueo.
+    await using (var lockDb = Context())
+    await using (var editDb = Context())
+    {
+        await using var tx = await lockDb.Database.BeginTransactionAsync();
+        await lockDb.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(72409101)");
+        var repo = new PublicacionRepository(editDb);
+        var p = (await repo.PorIdAsync(origen.Id, ct))!;
+        p.Tamano = TamanoMascota.Mediano;
+        var saving = repo.GuardarEdicionAsync(p, true, ct);
+        await lockDb.NotificacionesPendientes.Where(x => x.PublicacionId == origen.Id).ExecuteDeleteAsync();
+        await tx.CommitAsync();
+        await saving;
+        Check(await editDb.NotificacionesPendientes.AnyAsync(x => x.PublicacionId == origen.Id), "Worker y edición no pierden la revisión pendiente");
+    }
+    await Drenar();
+    await using (var db = Context()) updated = await Publicaciones(db).ResolverAsync(origen.Id, a.Id, ct);
+    edit = Editar(updated); edit.Tamano = 1;
+    await using (var db = Context())
+    {
+        updated = await Publicaciones(db).EditarAsync(origen.Id, a.Id, edit, ct);
+        Check(updated.Estado == 2 && !await db.NotificacionesPendientes.AnyAsync(), "Editar resuelta no reabre ni encola");
+    }
 }
 finally
 {

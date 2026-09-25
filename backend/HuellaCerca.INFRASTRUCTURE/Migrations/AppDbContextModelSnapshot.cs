@@ -389,6 +389,9 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                     b.Property<int>("Estado")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("timestamp with time zone");
 
@@ -424,6 +427,10 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
 
                     b.Property<int>("TipoPublicacion")
                         .HasColumnType("integer");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Zona")
                         .IsRequired()

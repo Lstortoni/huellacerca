@@ -1,4 +1,5 @@
 using HuellaCerca.CONTRACT.Notificaciones;
+using HuellaCerca.CONTRACT.Publicaciones;
 using HuellaCerca.CONTRACT.Ubicacion;
 using HuellaCerca.INFRASTRUCTURE.Data;
 using HuellaCerca.INTERFACES.Repositories;
@@ -14,11 +15,33 @@ public sealed class NotificacionRepository(AppDbContext db) : INotificacionRepos
         var rows = db.Notificaciones.AsNoTracking().Where(x => x.MascoteroId == autor);
         if (query.SoloNoLeidas) rows = rows.Where(x => x.FechaLectura == null);
         var total = await rows.CountAsync(ct);
-        var items = await rows.OrderByDescending(x => x.FechaCreacion).ThenBy(x => x.Id)
-            .Skip((query.Pagina - 1) * query.TamanoPagina).Take(query.TamanoPagina)
-            .Select(x => new NotificacionDto(x.Id, x.PublicacionId, x.PublicacionCoincidenteId,
-                x.Titulo, x.Mensaje, x.FechaCreacion, x.FechaLectura)).ToListAsync(ct);
+        var pagina = rows.OrderByDescending(x => x.FechaCreacion).ThenBy(x => x.Id)
+            .Skip((query.Pagina - 1) * query.TamanoPagina).Take(query.TamanoPagina);
+        // Una sola consulta: la página de notificaciones con el estado actual de ambos avisos.
+        var filas = await (
+            from n in pagina
+            join p in db.PublicacionesMascotas on n.PublicacionId equals p.Id
+            join c in db.PublicacionesMascotas on n.PublicacionCoincidenteId equals c.Id
+            orderby n.FechaCreacion descending, n.Id
+            select new
+            {
+                n.Id, n.PublicacionId, n.PublicacionCoincidenteId, n.Titulo, n.Mensaje, n.FechaCreacion, n.FechaLectura,
+                Propia = new ResumenFila(p.Id, (int)p.TipoPublicacion, (int)p.TipoMascota, p.NombreMascota,
+                    p.Localidad.Nombre, (int)p.Estado, p.Foto == null ? (Guid?)null : p.Foto.Id),
+                Otra = new ResumenFila(c.Id, (int)c.TipoPublicacion, (int)c.TipoMascota, c.NombreMascota,
+                    c.Localidad.Nombre, (int)c.Estado, c.Foto == null ? (Guid?)null : c.Foto.Id),
+            }).ToListAsync(ct);
+        var items = filas.Select(x => new NotificacionDto(x.Id, x.PublicacionId, x.PublicacionCoincidenteId,
+            x.Titulo, x.Mensaje, x.FechaCreacion, x.FechaLectura, x.Propia.ToDto(), x.Otra.ToDto())).ToList();
         return new(items, total, query.Pagina, query.TamanoPagina);
+    }
+
+    // La ruta de la foto se arma en memoria: EF no traduce la interpolación a SQL.
+    private sealed record ResumenFila(Guid Id, int TipoPublicacion, int TipoMascota, string? NombreMascota,
+        string Localidad, int Estado, Guid? FotoId)
+    {
+        public PublicacionResumenDto ToDto() => new(Id, TipoPublicacion, TipoMascota, NombreMascota, Localidad, Estado,
+            FotoId is { } foto ? FotoPublicacionDto.Ruta(Id, foto) : null);
     }
 
     public Task<int> ContarAsync(Guid autor, CancellationToken ct) =>

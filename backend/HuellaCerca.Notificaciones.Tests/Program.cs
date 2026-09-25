@@ -51,6 +51,7 @@ try
     var sinAtributo = Aviso(b, 2); sinAtributo.Tamano = null;
     var fechaIncorrecta = Aviso(b, 2); fechaIncorrecta.FechaSuceso = new DateOnly(2026, 3, 1);
     var resuelta = Aviso(b, 2); resuelta.Estado = EstadoPublicacionMascota.Resuelta;
+    compatibles[0].Foto = new FotoPublicacion { ObjectKey = "mascotas/prueba.webp" };
     await using (var db = Context())
     {
         // Simula candidatos históricos: no se encolan por sí solos.
@@ -84,6 +85,25 @@ try
         var service = new NotificacionService(new NotificacionRepository(db));
         var page = await service.ListarAsync(a.Id, new() { TamanoPagina = 10 }, ct);
         Check(page.Total == 205 && page.Items.Count == 10 && page.Items.All(x => x.PublicacionId == origen.Id), "Listado paginado propio");
+        Check(page.Items.Zip(page.Items.Skip(1)).All(z => z.First.FechaCreacion >= z.Second.FechaCreacion),
+            "El resumen conserva el orden por fecha");
+        Check(page.Items.All(x => x.Publicacion.Id == origen.Id && x.Publicacion.TipoPublicacion == 1
+            && x.Coincidente.Id == x.PublicacionCoincidenteId && x.Coincidente.TipoPublicacion == 2
+            && x.Coincidente.TipoMascota == 1 && x.Coincidente.Localidad == "Prueba" && x.Coincidente.Estado == 1),
+            "Cada notificación resume el aviso propio y el coincidente");
+        var todas = new List<NotificacionDto>();
+        for (var pagina = 1; todas.Count < 205; pagina++)
+            todas.AddRange((await service.ListarAsync(a.Id, new() { Pagina = pagina, TamanoPagina = 50 }, ct)).Items);
+        var conFoto = todas.Single(x => x.PublicacionCoincidenteId == compatibles[0].Id);
+        Check(conFoto.Coincidente.FotoUrl == $"api/publicaciones/{compatibles[0].Id}/foto?v={compatibles[0].Foto!.Id}"
+            && todas.Count(x => x.Coincidente.FotoUrl != null) == 1, "Ruta de foto versionada solo si el aviso tiene foto");
+        await db.PublicacionesMascotas.Where(x => x.Id == compatibles[1].Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Estado, EstadoPublicacionMascota.Resuelta));
+        todas.Clear();
+        for (var pagina = 1; todas.Count < 205; pagina++)
+            todas.AddRange((await service.ListarAsync(a.Id, new() { Pagina = pagina, TamanoPagina = 50 }, ct)).Items);
+        Check(todas.Single(x => x.PublicacionCoincidenteId == compatibles[1].Id).Coincidente.Estado == 2,
+            "El resumen informa el estado actual del aviso");
         var id = page.Items[0].Id;
         try { await service.LeerAsync(b.Id, id, ct); throw new Exception("Permitió leer notificación ajena"); }
         catch (AppException ex) when (ex.StatusCode == 404) { Console.WriteLine("OK: lectura ajena rechazada"); }

@@ -128,6 +128,6 @@ public sealed class PublicacionService(IPublicacionRepository repository, IAuthR
         (int)p.TipoPublicacion, (int)p.TipoMascota, p.NombreMascota, p.Descripcion, p.FechaSuceso,
         p.LocalidadId, p.Localidad.Nombre, p.Localidad.ProvinciaId, p.Localidad.Provincia.Nombre,
         p.Zona, p.InformacionContacto, p.FechaCreacion, (int)p.Estado,
-        p.Foto is null ? null : new FotoPublicacionDto(p.Foto.Id, $"api/publicaciones/{p.Id}/foto?v={p.Foto.Id}"),
+        p.Foto is null ? null : new FotoPublicacionDto(p.Foto.Id, FotoPublicacionDto.Ruta(p.Id, p.Foto.Id)),
         (int?)p.Tamano, (int?)p.Raza, (int?)p.Pelaje, (int?)p.ColorPredominante, (int?)p.ColorOjos);
 }

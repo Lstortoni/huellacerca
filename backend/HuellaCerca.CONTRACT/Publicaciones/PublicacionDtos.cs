@@ -64,4 +64,8 @@ public sealed record CoincidenciaPublicacionDto(PublicacionDto Publicacion, IRea
 public sealed record CaracteristicaMascotaDto(string Campo, string Nombre, IReadOnlyList<OpcionCaracteristicaDto> Opciones);
 
 // URL relativa a la API; nunca expone credenciales ni el contenido binario en JSON.
-public sealed record FotoPublicacionDto(Guid Id, string Url);
+public sealed record FotoPublicacionDto(Guid Id, string Url)
+{
+    /// Ruta versionada: cambia al reemplazar la foto, así la app no usa una copia vieja.
+    public static string Ruta(Guid publicacionId, Guid fotoId) => $"api/publicaciones/{publicacionId}/foto?v={fotoId}";
+}

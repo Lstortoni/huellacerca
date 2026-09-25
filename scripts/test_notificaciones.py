@@ -60,6 +60,11 @@ try:
     items_c = call('GET', '/api/notificaciones?tamanoPagina=50', token=c)['items']
     assert not any(n['publicacionId'] == propia1 and n['publicacionCoincidenteId'] == propia2 for n in items_c)
     n = next(x for x in page['items'] if x['publicacionId'] == perdida and x['publicacionCoincidenteId'] == encontrada)
+    # Resumen de ambos avisos para mostrar la notificación sin pedir cada detalle.
+    assert n['publicacion']['id'] == perdida and n['publicacion']['tipoPublicacion'] == 1
+    assert n['coincidente']['id'] == encontrada and n['coincidente']['tipoPublicacion'] == 2
+    assert n['coincidente']['estado'] == 1 and n['coincidente']['fotoUrl'] is None
+    assert n['coincidente']['localidad'] and n['coincidente']['tipoMascota'] == 1
     call('GET', '/api/notificaciones', status=401)
     call('GET', '/api/notificaciones/no-leidas/cantidad', status=401)
     call('PATCH', '/api/notificaciones/'+n['id']+'/leer', status=401)
@@ -78,7 +83,7 @@ try:
         call('GET', '/api/publicaciones/'+perdida+'/coincidencias', token=a)
     again = call('GET', '/api/notificaciones?tamanoPagina=50', token=a)
     assert len({x['id'] for x in again['items']}) == len(again['items'])
-    print('OK HTTP: generación automática, ambos autores, cuatro tipos, propias excluidas, JWT, aislamiento, paginación y lecturas.')
+    print('OK HTTP: generación automática, ambos autores, cuatro tipos, propias excluidas, resumen de avisos, JWT, aislamiento, paginación y lecturas.')
 finally:
     for id, token in created:
         call('PATCH', '/api/publicaciones/'+id+'/resolver', token=token)

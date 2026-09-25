@@ -19,7 +19,7 @@ public sealed class FotoService(IFotoRepository repository, IAlmacenamientoFotos
         await repository.PrepararAsync(foto.ObjectKey, ct);
         await storage.SubirAsync(foto.ObjectKey, bytes, ct);
         await repository.ConfirmarAsync(id, p.Foto?.Id, foto, ct);
-        return new(foto.Id, $"api/publicaciones/{id}/foto?v={foto.Id}");
+        return new(foto.Id, FotoPublicacionDto.Ruta(id, foto.Id));
     }
 
     public async Task<byte[]> LeerAsync(Guid id, CancellationToken ct)

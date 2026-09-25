@@ -7,6 +7,8 @@ import 'package:huella_cerca/widgets/lista_paginada.dart';
 import 'package:huella_cerca/core/network/api_exception.dart';
 import 'package:huella_cerca/pages/mascotas_page.dart';
 import 'package:huella_cerca/models/recomendacion_dto.dart';
+import 'package:huella_cerca/models/notificacion_dto.dart';
+import 'package:huella_cerca/pages/notificaciones_page.dart';
 import 'package:huella_cerca/pages/perfil_page.dart';
 import 'package:huella_cerca/pages/prestador_detalle_page.dart';
 import 'package:huella_cerca/pages/publicacion_detalle_page.dart';
@@ -17,6 +19,7 @@ import 'package:huella_cerca/models/auth_dto.dart';
 import 'package:huella_cerca/models/publicacion_dto.dart';
 
 import 'support/comunidad_mocks.dart';
+import 'support/notificaciones_mocks.dart';
 import 'support/service_mocks.dart';
 
 void main() {
@@ -193,6 +196,23 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Guardar aspectos'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final notificaciones = NotificacionServiceMock()
+        ..items = [NotificacionDto.fromJson(notificacionJson())]
+        ..noLeidas = 1;
+      addTearDown(notificaciones.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NotificacionesPage(
+            auth: auth,
+            notificaciones: notificaciones,
+            publicaciones: PublicacionServiceMock(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Ver mi aviso: Toby'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(MaterialApp(home: PerfilPage(auth: auth)));

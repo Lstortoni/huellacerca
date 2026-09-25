@@ -15,6 +15,8 @@ import '../network/http_api_client.dart';
 import '../storage/session_storage.dart';
 import '../storage/secure_session_storage.dart';
 import '../../services/contracts/acciones_externas.dart';
+import '../../services/contracts/notificacion_service.dart';
+import '../../services/implementations/notificacion_service_api.dart';
 import '../../services/contracts/selector_fotos.dart';
 import '../../services/implementations/acciones_externas_plataforma.dart';
 import '../../services/implementations/selector_fotos_galeria.dart';
@@ -38,6 +40,10 @@ void configurarServicios({
   getIt.registerLazySingleton<AuthService>(
     () => AuthServiceApi(getIt<ApiClient>(), getIt<SessionStorage>()),
     dispose: (auth) => auth.dispose(),
+  );
+  getIt.registerLazySingleton<NotificacionService>(
+    () => NotificacionServiceApi(getIt<AuthService>()),
+    dispose: (notificaciones) => notificaciones.dispose(),
   );
   getIt.registerLazySingleton<UbicacionService>(
     () => UbicacionServiceApi(getIt<ApiClient>()),

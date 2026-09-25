@@ -15,6 +15,9 @@ import 'pages/recomendaciones_page.dart';
 import 'pages/recomendar_servicio_page.dart';
 import 'services/contracts/publicacion_service.dart';
 import 'services/contracts/recomendacion_service.dart';
+import 'services/contracts/notificacion_service.dart';
+import 'pages/notificaciones_page.dart';
+import 'widgets/notificaciones_scope.dart';
 
 /// Widget raíz: resuelve contratos y configura tema, inicio y rutas.
 class HuellaCercaApp extends StatefulWidget {
@@ -25,16 +28,42 @@ class HuellaCercaApp extends StatefulWidget {
 }
 
 class _HuellaCercaAppState extends State<HuellaCercaApp> {
+  // Opcional: las pruebas que no lo registran funcionan sin campanita.
+  final NotificacionService? _notificaciones =
+      getIt.isRegistered<NotificacionService>()
+      ? getIt<NotificacionService>()
+      : null;
+  AppLifecycleListener? _ciclo;
+
   @override
   void initState() {
     super.initState();
     getIt<AuthService>().restaurar();
+    final notificaciones = _notificaciones;
+    if (notificaciones != null) {
+      // En segundo plano no se consulta; al volver se actualiza enseguida.
+      _ciclo = AppLifecycleListener(
+        onHide: notificaciones.pausar,
+        onResume: notificaciones.reanudar,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _ciclo?.dispose();
+    // Sin la app en pantalla no se consulta (también libera el temporizador).
+    _notificaciones?.pausar();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'Huella Cerca',
     debugShowCheckedModeBanner: false,
+    builder: (context, child) => _notificaciones == null
+        ? child!
+        : NotificacionesScope(notifier: _notificaciones, child: child!),
     theme: ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: ColoresApp.verde),
       scaffoldBackgroundColor: ColoresApp.fondo,
@@ -89,6 +118,11 @@ class _HuellaCercaAppState extends State<HuellaCercaApp> {
         auth: getIt<AuthService>(),
         service: getIt<RecomendacionService>(),
         ubicacion: getIt<UbicacionService>(),
+      ),
+      '/notificaciones': (_) => NotificacionesPage(
+        auth: getIt<AuthService>(),
+        notificaciones: getIt<NotificacionService>(),
+        publicaciones: getIt<PublicacionService>(),
       ),
     },
   );

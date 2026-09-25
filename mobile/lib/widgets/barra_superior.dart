@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/colores_app.dart';
 import '../services/contracts/auth_service.dart';
+import 'notificaciones_scope.dart';
 
 /// Cierra la sesión, vuelve al inicio e informa si el servidor no confirmó.
 Future<void> cerrarSesion(BuildContext context, AuthService auth) async {
@@ -39,6 +40,9 @@ class BarraSuperior extends StatelessWidget implements PreferredSizeWidget {
                 ScaffoldMessenger.of(context)
                     .showSnackBar(SnackBar(content: Text(auth.aviso!))),
           ),
+        if (auth.autenticado && !auth.restaurando)
+          if (NotificacionesScope.maybeOf(context) case final notificaciones?)
+            _Campanita(cantidad: notificaciones.noLeidas),
         if (auth.restaurando || auth.ocupado)
           const Padding(
             padding: EdgeInsets.all(18),
@@ -160,6 +164,33 @@ class BarraSuperior extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       ],
+    ),
+  );
+}
+
+/// Abre las notificaciones; el número muestra las no leídas.
+class _Campanita extends StatelessWidget {
+  const _Campanita({required this.cantidad});
+  final int cantidad;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: cantidad == 0
+        ? 'Notificaciones'
+        : 'Notificaciones: $cantidad sin leer',
+    onPressed: () {
+      if (ModalRoute.of(context)?.settings.name != '/notificaciones') {
+        Navigator.of(context).pushNamed('/notificaciones');
+      }
+    },
+    icon: Badge(
+      isLabelVisible: cantidad > 0,
+      label: Text(cantidad > 99 ? '99+' : '$cantidad'),
+      child: Icon(
+        cantidad > 0
+            ? Icons.notifications_rounded
+            : Icons.notifications_none_rounded,
+      ),
     ),
   );
 }

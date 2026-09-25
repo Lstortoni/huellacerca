@@ -9,7 +9,7 @@ Implementación sin Firebase ni cambios en Flutter. Una notificación es persist
 3. `ProcesarNotificaciones`, un `BackgroundService` dentro de la API, consulta la cola al iniciar y cada 10 segundos cuando no hay trabajo. No requiere otro contenedor.
 4. `NotificacionService` delega el procesamiento transaccional en `NotificacionRepository`. La selección comparte `CoincidenciasConsulta` con el listado existente.
 5. Por cada candidato de otro mascotero se insertan dos notificaciones, una por autor. `PublicacionId` siempre es el aviso propio del destinatario; `PublicacionCoincidenteId` es el candidato.
-6. La app puede consultar los endpoints protegidos, mostrar la campana y abrir el detalle propio. Esa integración queda pendiente.
+6. La app muestra la campanita con el contador y la página de notificaciones (ver [Flutter](#flutter)).
 
 Se mantienen las reglas: activa, tipo opuesto (1↔2 o 3↔4), misma especie/localidad, al menos un atributo no nulo coincidente. Hallazgo entre 3 días antes y 30 después del extravío; adopción no exige fecha. Se excluyen notificaciones entre avisos del mismo autor. No se analizan imágenes.
 
@@ -35,9 +35,32 @@ Todas las rutas requieren `Authorization: Bearer ACCESS_TOKEN`.
 | PATCH `/api/notificaciones/{id}/leer` | 204, sin body |
 | PATCH `/api/notificaciones/leer-todas` | 204, sin body |
 
-Cada item contiene `id`, `publicacionId`, `publicacionCoincidenteId`, `titulo`, `mensaje`, `fechaCreacion`, `fechaLectura`. `fechaLectura: null` significa no leída. Leer otra vez no modifica la primera fecha. Un ID ajeno o inexistente devuelve 404. Páginas desde 1, máximo 50 items, página máxima 1.000.000; parámetros inválidos → 400. Sin JWT → 401.
+Cada item contiene `id`, `publicacionId`, `publicacionCoincidenteId`, `titulo`, `mensaje`, `fechaCreacion`, `fechaLectura`, `publicacion` y `coincidente`. `fechaLectura: null` significa no leída.
+
+`publicacion` (el aviso propio) y `coincidente` resumen cada aviso para mostrar la notificación sin pedir su detalle: `id`, `tipoPublicacion`, `tipoMascota`, `nombreMascota` (nullable), `localidad`, `estado` y `fotoUrl` (relativa a la API y versionada, o null). Reflejan el estado **actual**: si un aviso se resolvió después de notificar, `estado` es 2. Se obtienen en la misma consulta paginada, con joins; no agregan columnas ni requieren migración.
+
+```json
+{
+  "id": "…", "publicacionId": "…", "publicacionCoincidenteId": "…",
+  "titulo": "Nueva posible coincidencia", "mensaje": "…",
+  "fechaCreacion": "2026-09-24T20:30:00Z", "fechaLectura": null,
+  "publicacion": { "id": "…", "tipoPublicacion": 1, "tipoMascota": 1, "nombreMascota": "Toby",
+                   "localidad": "La Plata", "estado": 1, "fotoUrl": "api/publicaciones/…/foto?v=…" },
+  "coincidente": { "id": "…", "tipoPublicacion": 2, "tipoMascota": 1, "nombreMascota": null,
+                   "localidad": "La Plata", "estado": 1, "fotoUrl": null }
+}
+``` Leer otra vez no modifica la primera fecha. Un ID ajeno o inexistente devuelve 404. Páginas desde 1, máximo 50 items, página máxima 1.000.000; parámetros inválidos → 400. Sin JWT → 401.
 
 Se conserva una fila por pareja y destinatario; el contador cuenta esas filas, no publicaciones agrupadas. `publicacionId` permite agrupar visualmente, pero la API lista notificaciones individuales paginadas. Si se necesita agrupación global paginada, debe agregarse esa consulta antes de implementar esa presentación; agrupar solo una página no da el total global.
+
+## Flutter
+
+- `NotificacionService` (contrato observable, igual que `AuthService`) y `NotificacionServiceApi` consultan `no-leidas/cantidad` **cada 2 minutos** mientras hay sesión, y además enseguida al iniciar/restaurar la sesión, al volver a la app y al abrir la página. En segundo plano no consulta (`AppLifecycleListener` en `app.dart`). Al cerrar sesión el contador vuelve a 0. Un fallo de red conserva el último valor sin mostrar error.
+- `NotificacionesScope` (`InheritedNotifier`) publica el servicio una vez en el `builder` de `MaterialApp`; `BarraSuperior` muestra la campanita (solo con sesión, 99+ como máximo) sin recibirlo por constructor en cada página.
+- `/notificaciones` (`NotificacionesPage`): Todas / No leídas, "Marcar todas como leídas", tarjetas con foto y tipo del aviso que coincide y su estado actual. Tocar una la marca leída (el contador baja enseguida) y abre **el aviso que coincide**; "Ver mi aviso" abre el propio.
+- Pruebas: `mobile/test/notificaciones_test.dart`.
+
+Las notificaciones con la app cerrada (Firebase) son una etapa posterior.
 
 ## Validación
 

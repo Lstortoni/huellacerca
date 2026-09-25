@@ -10,9 +10,13 @@ class ListaPaginada<T> extends StatefulWidget {
     super.key,
     required this.cargar,
     required this.itemBuilder,
+    this.vacio,
   });
   final Future<PaginaDto<T>> Function(int pagina) cargar;
   final Widget Function(T item, VoidCallback recargar) itemBuilder;
+
+  /// Reemplaza el mensaje genérico de resultados vacíos.
+  final Widget? vacio;
   @override
   State<ListaPaginada<T>> createState() => _ListaPaginadaState<T>();
 }
@@ -67,10 +71,11 @@ class _ListaPaginadaState<T> extends State<ListaPaginada<T>> {
             ),
           ),
           if (page.items.isEmpty)
-            const EstadoMensaje(
-              icono: Icons.search_off_rounded,
-              mensaje: 'No encontramos resultados con esos filtros.',
-            ),
+            widget.vacio ??
+                const EstadoMensaje(
+                  icono: Icons.search_off_rounded,
+                  mensaje: 'No encontramos resultados con esos filtros.',
+                ),
           ...page.items.map(
             (item) => widget.itemBuilder(item, () => _cargar(_pagina)),
           ),

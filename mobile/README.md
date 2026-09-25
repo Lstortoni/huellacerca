@@ -231,3 +231,14 @@ El listado público devuelve prestadores (una ficha por ID), no opiniones indivi
 Desde **Servicios recomendados**, la ficha es pública y de solo lectura, incluso con sesión iniciada. Muestra datos del servicio, cantidad de recomendaciones, aspectos agregados y nombres de quienes lo recomiendan (paginados). No consulta la recomendación propia ni ofrece recomendar, guardar aspectos, retirar o iniciar sesión para recomendar. Estas acciones se ofrecen exclusivamente desde **Recomendar un servicio**.
 
 El listado público excluye prestadores con cero recomendaciones. Esas fichas permanecen en la búsqueda de similares del recorrido para recomendar.
+
+## Notificaciones
+
+Con sesión, la barra muestra una campanita con las notificaciones sin leer (posibles coincidencias con tus avisos). El contador se consulta cada 2 minutos mientras la app está abierta, y además al iniciar sesión, al volver a la app y al abrir la página; en segundo plano no consulta. Tocar una notificación la marca como leída y abre el aviso que coincide; "Ver mi aviso" abre el propio.
+
+- `models/notificacion_dto.dart`: notificación con el resumen de ambos avisos.
+- `services/contracts/notificacion_service.dart` e `implementations/notificacion_service_api.dart`: contador observable, temporizador y lecturas.
+- `widgets/notificaciones_scope.dart`: publica el servicio una vez en `app.dart` para que `BarraSuperior` lo use sin recibirlo en cada página.
+- `pages/notificaciones_page.dart` y `widgets/tarjeta_notificacion.dart`: listado, filtro No leídas y "Marcar todas como leídas".
+
+Detalle del contrato y de la generación en la API: [docs/notificaciones.md](../docs/notificaciones.md).

@@ -1,4 +1,4 @@
-package com.example.huella_cerca
+package com.huellacerca.app
 
 import io.flutter.embedding.android.FlutterActivity
 

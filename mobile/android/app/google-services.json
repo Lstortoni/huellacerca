@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "111113744770",
+    "project_id": "huella-cerca",
+    "storage_bucket": "huella-cerca.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:111113744770:android:9558bef55f046f5e535f9b",
+        "android_client_info": {
+          "package_name": "com.huellacerca.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUUhchshoMzLHP5pQwYSbbRBjr6QpLmMg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

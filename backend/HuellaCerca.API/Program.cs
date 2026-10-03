@@ -40,6 +40,15 @@ builder.Services.AddScoped<IPublicacionRepository, PublicacionRepository>();
 builder.Services.AddScoped<IPublicacionService, PublicacionService>();
 builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
 builder.Services.AddScoped<INotificacionService, NotificacionService>();
+builder.Services.AddScoped<IPushRepository, PushRepository>();
+builder.Services.AddScoped<IPushService, PushService>();
+builder.Services.AddOptions<HuellaCerca.INFRASTRUCTURE.Push.FirebasePushSettings>()
+    .Bind(builder.Configuration.GetSection("FirebasePush"))
+    .Validate(x => !x.Enabled || (!string.IsNullOrWhiteSpace(x.ProjectId) && File.Exists(x.CredentialsPath)),
+        "FirebasePush requiere ProjectId y CredentialsPath de una cuenta de servicio existente.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IEmisorPush, HuellaCerca.INFRASTRUCTURE.Push.FirebaseEmisorPush>();
+builder.Services.AddHostedService<HuellaCerca.API.Notificaciones.EnviarNotificacionesPush>();
 builder.Services.AddHostedService<HuellaCerca.API.Notificaciones.ProcesarNotificaciones>();
 builder.Services.AddScoped<IFotoRepository, FotoRepository>();
 builder.Services.AddScoped<IFotoService, FotoService>();

@@ -83,6 +83,95 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HuellaCerca.MODEL.DispositivoPush", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("MascoteroId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Plataforma")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("SesionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<Guid>("Version")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique()
+                        .HasFilter("\"Activo\" = TRUE");
+
+                    b.HasIndex("MascoteroId", "Activo");
+
+                    b.ToTable("DispositivosPush", (string)null);
+                });
+
+            modelBuilder.Entity("HuellaCerca.MODEL.EnvioPush", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DispositivoPushId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaFinalizacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Intentos")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("NotificacionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ProximoIntento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("Reserva")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Resultado")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("VersionDispositivo")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DispositivoPushId");
+
+                    b.HasIndex("ProximoIntento")
+                        .HasFilter("\"FechaFinalizacion\" IS NULL");
+
+                    b.HasIndex("NotificacionId", "DispositivoPushId")
+                        .IsUnique();
+
+                    b.ToTable("EnviosPush", (string)null);
+                });
+
             modelBuilder.Entity("HuellaCerca.MODEL.FotoPendienteLimpieza", b =>
                 {
                     b.Property<string>("ObjectKey")
@@ -654,6 +743,30 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                         .IsUnique();
 
                     b.ToTable("usuarios", (string)null);
+                });
+
+            modelBuilder.Entity("HuellaCerca.MODEL.DispositivoPush", b =>
+                {
+                    b.HasOne("HuellaCerca.MODEL.Mascotero", null)
+                        .WithMany()
+                        .HasForeignKey("MascoteroId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HuellaCerca.MODEL.EnvioPush", b =>
+                {
+                    b.HasOne("HuellaCerca.MODEL.DispositivoPush", null)
+                        .WithMany()
+                        .HasForeignKey("DispositivoPushId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HuellaCerca.MODEL.Notificacion", null)
+                        .WithMany()
+                        .HasForeignKey("NotificacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("HuellaCerca.MODEL.FotoPublicacion", b =>

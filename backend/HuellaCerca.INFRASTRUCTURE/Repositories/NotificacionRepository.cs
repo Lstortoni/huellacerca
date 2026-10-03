@@ -10,6 +10,9 @@ namespace HuellaCerca.INFRASTRUCTURE.Repositories;
 
 public sealed class NotificacionRepository(AppDbContext db) : INotificacionRepository
 {
+    public Task<Guid?> DestinoAsync(Guid autor, Guid id, CancellationToken ct) =>
+        db.Notificaciones.Where(x => x.Id == id && x.MascoteroId == autor)
+            .Select(x => (Guid?)x.PublicacionCoincidenteId).SingleOrDefaultAsync(ct);
     public async Task<PaginaDto<NotificacionDto>> ListarAsync(Guid autor, NotificacionesQuery query, CancellationToken ct)
     {
         var rows = db.Notificaciones.AsNoTracking().Where(x => x.MascoteroId == autor);
@@ -91,9 +94,18 @@ public sealed class NotificacionRepository(AppDbContext db) : INotificacionRepos
     {
         var n = new Notificacion { MascoteroId = autor, PublicacionId = propia, PublicacionCoincidenteId = otra };
         return db.Database.ExecuteSqlInterpolatedAsync($"""
+            WITH nueva AS (
             INSERT INTO "Notificaciones" ("Id", "MascoteroId", "PublicacionId", "PublicacionCoincidenteId", "Titulo", "Mensaje", "FechaCreacion", "FechaLectura")
             VALUES ({n.Id}, {autor}, {propia}, {otra}, {n.Titulo}, {n.Mensaje}, {n.FechaCreacion}, NULL)
             ON CONFLICT ("MascoteroId", "PublicacionId", "PublicacionCoincidenteId") DO NOTHING
+            RETURNING "Id", "MascoteroId")
+            INSERT INTO "EnviosPush" ("Id", "NotificacionId", "DispositivoPushId", "VersionDispositivo",
+                "FechaCreacion", "ProximoIntento", "Intentos")
+            SELECT gen_random_uuid(), n."Id", d."Id", d."Version", {n.FechaCreacion}, {n.FechaCreacion}, 0
+            FROM nueva n JOIN "DispositivosPush" d ON d."MascoteroId" = n."MascoteroId" AND d."Activo"
+            WHERE EXISTS (SELECT 1 FROM "refresh_tokens" r WHERE r."SesionId" = d."SesionId"
+                AND r."FechaRevocacion" IS NULL AND r."FechaExpiracion" > {n.FechaCreacion})
+            ON CONFLICT ("NotificacionId", "DispositivoPushId") DO NOTHING
             """, ct);
     }
 }

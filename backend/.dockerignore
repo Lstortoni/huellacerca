@@ -4,4 +4,6 @@
 **/*.user
 **/*.log
 .env*
+**/*firebase-admin*.json
+**/*firebase-adminsdk*.json
 

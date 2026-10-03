@@ -18,6 +18,45 @@ http.Response json(Object? data, [int status = 200]) => http.Response(
 );
 
 void main() {
+  for (final fallaPush in [false, true]) {
+    test(
+      'Logout desvincula antes de borrar sesión; fallo push=$fallaPush',
+      () async {
+        var desvinculado = false;
+        final storage = MemorySessionStorage()..value = sesionTexto();
+        final api = HttpApiClient(
+          baseUrl: 'http://localhost/',
+          client: MockClient((r) async {
+            if (r.url.path.endsWith('logout')) {
+              expect(desvinculado, isTrue);
+              return http.Response('', 204);
+            }
+            return json(usuarioJson());
+          }),
+        );
+        late AuthServiceApi auth;
+        auth = AuthServiceApi(
+          api,
+          storage,
+          antesDeLogout: () async {
+            expect(auth.autenticado, isTrue);
+            expect(storage.value, isNotNull);
+            desvinculado = true;
+            if (fallaPush) throw StateError('Sin conexión a push');
+          },
+        );
+        addTearDown(() {
+          auth.dispose();
+          api.close();
+        });
+        await auth.restaurar();
+        await auth.logout();
+        expect(storage.value, isNull);
+        expect(auth.autenticado, isFalse);
+        if (fallaPush) expect(auth.aviso, contains('desvinculación'));
+      },
+    );
+  }
   test(
     'Login guarda sesión sin contraseña y me manda solo el access token',
     () async {

@@ -749,7 +749,50 @@ Prueba: crear → resolver → reabrir → comprobar `estado: 1`; repetir reabri
 
 Pruebas: `docker compose run --rm --no-deps huellacerca_tests python /tests/test_edicion_publicaciones.py`. Concurrencia y cola: `docker compose run --rm --no-deps huellacerca_tools run --project HuellaCerca.Notificaciones.Tests` (base temporal).
 
-## Resumen de respuestas
+## Dispositivos push (JWT obligatorio)
+
+### Registrar o actualizar una instalación
+
+`PUT http://localhost:5080/api/dispositivos-push/93bf11a0-fac9-4a5e-b230-2fbdca933bcb`
+
+Authorization → Bearer Token → `ACCESS_TOKEN` de una sesión activa. Body → raw → JSON:
+
+```json
+{
+  "token": "TOKEN_FCM_REAL_DE_ESTA_INSTALACION",
+  "plataforma": "android"
+}
+```
+
+Respuesta: `204`. Repetir el mismo PUT actualiza sin duplicar. El GUID representa la instalación;
+Flutter lo genera y guarda automáticamente. No enviar MascoteroId: se obtiene del JWT.
+El token de Firebase va en el body; el JWT de nuestra API va en Authorization.
+Una sesión revocada/vencida no puede registrar dispositivos, aunque conserve un access token sin vencer.
+
+### Desvincular al cerrar sesión
+
+`DELETE http://localhost:5080/api/dispositivos-push/93bf11a0-fac9-4a5e-b230-2fbdca933bcb`
+
+Mismo JWT, sin body. Respuesta: `204`, incluso si ya estaba desvinculado. No desactiva registros
+de otro mascotero ni de otra sesión. Flutter lo llama antes del logout.
+
+### Resolver el destino de una notificación
+
+`GET http://localhost:5080/api/notificaciones/NOTIFICACION_ID/destino`
+
+JWT del destinatario. Devuelve `200`:
+
+```json
+{ "publicacionId": "ID_DE_LA_PUBLICACION_COINCIDENTE" }
+```
+
+Otra cuenta recibe `404`. La app usa esta respuesta al tocar el push y luego llama al endpoint
+existente `PATCH /api/notificaciones/NOTIFICACION_ID/leer`.
+
+No hay un endpoint público para enviar mensajes arbitrarios: el worker envía coincidencias nuevas.
+Configuración de la cuenta de servicio y prueba entre dos cuentas: [Push Firebase](docs/push-firebase.md).
+
+## Códigos de respuesta
 
 | Código | Significado en estas pruebas |
 | --- | --- |

@@ -11,6 +11,10 @@ public sealed class NotificacionesController(INotificacionService service) : Con
 {
     private Guid Autor => Guid.Parse(User.FindFirst("mascoteroId")!.Value);
 
+    [HttpGet("{id:guid}/destino")]
+    public async Task<IActionResult> Destino(Guid id, CancellationToken ct) =>
+        Ok(new { publicacionId = await service.DestinoAsync(Autor, id, ct) });
+
     [HttpGet]
     public Task<PaginaDto<NotificacionDto>> Listar([FromQuery] NotificacionesQuery query, CancellationToken ct) =>
         service.ListarAsync(Autor, query, ct);

@@ -4,6 +4,9 @@
 *.user
 *.suo
 *.log
+secrets/
+**/*firebase-admin*.json
+**/*firebase-adminsdk*.json
 .env
 .env.*
 !.env.example

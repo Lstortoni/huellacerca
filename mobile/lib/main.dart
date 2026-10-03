@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'core/di/service_registration.dart';
-import 'core/notifications/prueba_push.dart';
 
 // Punto de entrada. La configuración visual vive en app.dart.
 Future<void> main() async {
@@ -16,15 +15,8 @@ Future<void> main() async {
     await Firebase.initializeApp();
   }
 
-  configurarServicios();
+  configurarServicios(
+    habilitarPush: !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
+  );
   runApp(const HuellaCercaApp());
-
-  // Prueba manual: pedir permiso cuando la primera pantalla ya está visible.
-  if (kDebugMode &&
-      !kIsWeb &&
-      defaultTargetPlatform == TargetPlatform.android) {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await prepararPruebaPush();
-    });
-  }
 }

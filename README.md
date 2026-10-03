@@ -177,3 +177,10 @@ El respaldo no está expuesto en la API ni modelado por EF.
 La migración corre en una transacción con bloqueo de la tabla. No modifica migraciones anteriores.
 **No tiene Down automático**: restaurar la versión anterior requiere una operación explícita y un respaldo completo de la base; el archivo de textos no incluye cambios posteriores ni reemplaza un backup.
 No eliminar el volumen Docker para migrar. El servicio huellacerca_migrations aplica el cambio antes de iniciar la API.
+
+### Push por coincidencias (Firebase)
+
+La integración Android registra dispositivos por sesión y la API encola envíos al generar
+notificaciones internas. Configuración de la cuenta de servicio, flujo por archivo y pruebas:
+[Notificaciones push](docs/push-firebase.md). Está deshabilitada por defecto en el backend hasta
+colocar `secrets/firebase-admin.json` y habilitar `FIREBASE_PUSH_ENABLED` en `.env`.

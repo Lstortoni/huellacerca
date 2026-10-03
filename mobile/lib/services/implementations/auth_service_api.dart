@@ -10,7 +10,8 @@ import '../contracts/auth_service.dart';
 
 /// Estado de sesión compartido. Las páginas y la barra escuchan sus cambios.
 class AuthServiceApi extends ChangeNotifier implements AuthService {
-  AuthServiceApi(this._api, this._storage);
+  AuthServiceApi(this._api, this._storage, {this.antesDeLogout});
+  final Future<void> Function()? antesDeLogout;
   final ApiClient _api;
   final SessionStorage _storage;
   AuthResponse? _session;
@@ -264,8 +265,17 @@ class AuthServiceApi extends ChangeNotifier implements AuthService {
         /* La renovación ya limpió la sesión. */
       }
       final token = _session?.refreshToken;
+      var pushDesvinculado = true;
+      try {
+        await antesDeLogout?.call();
+      } catch (_) {
+        pushDesvinculado = false;
+      }
       await _clear();
       aviso = null;
+      if (!pushDesvinculado) {
+        aviso = 'Saliste de la cuenta. No pudimos confirmar la desvinculación de las notificaciones de este dispositivo.';
+      }
       if (token != null) {
         try {
           await _api.postJson('api/auth/logout', {'refreshToken': token});

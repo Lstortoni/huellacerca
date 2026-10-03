@@ -218,6 +218,7 @@ try
         updated = await Publicaciones(db).EditarAsync(origen.Id, a.Id, edit, ct);
         Check(updated.Estado == 2 && !await db.NotificacionesPendientes.AnyAsync(), "Editar resuelta no reabre ni encola");
     }
+    await PushChecks.Run(Context, localidad.Id);
 }
 finally
 {

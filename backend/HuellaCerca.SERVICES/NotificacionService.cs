@@ -9,6 +9,8 @@ namespace HuellaCerca.SERVICES;
 
 public sealed class NotificacionService(INotificacionRepository repository) : INotificacionService
 {
+    public async Task<Guid> DestinoAsync(Guid autor, Guid id, CancellationToken ct) =>
+        await repository.DestinoAsync(autor, id, ct) ?? throw new AppException(404, "Notificación no encontrada.");
     public Task<PaginaDto<NotificacionDto>> ListarAsync(Guid autor, NotificacionesQuery query, CancellationToken ct)
     {
         var errors = new List<ValidationResult>();

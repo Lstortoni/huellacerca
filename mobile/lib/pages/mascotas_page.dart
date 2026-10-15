@@ -44,12 +44,19 @@ class _MascotasPageState extends State<MascotasPage> {
   String? _error;
   int _revision = 0;
   bool _panelAbierto = false;
-  late Map<String, String> _filtros = widget.soloMias
-      ? {'mascoteroId': widget.auth.usuario!.mascotero.id}
-      : {'estado': '1'};
+  late Map<String, String> _filtros = {
+    if (!widget.soloMias) 'estado': '1',
+    ..._filtroMascotero,
+  };
   Future<List<CaracteristicaMascotaDto>>? _opciones;
   final Map<String, int> _caracteristicas = {};
   final Map<String, String> _nombresCaracteristicas = {};
+
+  Map<String, String> get _filtroMascotero => {
+    if (widget.auth.autenticado)
+      (_mias ? 'mascoteroId' : 'excluirMascoteroId'):
+          widget.auth.usuario!.mascotero.id,
+  };
 
   void _cambiarMascota(int? tipo) {
     _mascota = tipo;
@@ -85,8 +92,7 @@ class _MascotasPageState extends State<MascotasPage> {
         if (_zona.text.trim().isNotEmpty) 'zona': _zona.text.trim(),
         if (_desde != null) 'fechaDesde': fechaApi(_desde!),
         if (_hasta != null) 'fechaHasta': fechaApi(_hasta!),
-        if (_mias && widget.auth.autenticado)
-          'mascoteroId': widget.auth.usuario!.mascotero.id,
+        ..._filtroMascotero,
       };
       _revision++;
     });

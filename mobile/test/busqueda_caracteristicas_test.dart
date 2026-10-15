@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:huella_cerca/models/auth_dto.dart';
 import 'package:huella_cerca/models/publicacion_dto.dart';
 import 'package:huella_cerca/pages/mascotas_page.dart';
 import 'package:huella_cerca/pages/publicacion_detalle_page.dart';
@@ -26,6 +27,35 @@ Finder dato(String etiqueta, String valor) => find.descendant(
 );
 
 void main() {
+  for (final soloMias in [false, true]) {
+    testWidgets('Filtro de autor con sesión, soloMias=$soloMias', (
+      tester,
+    ) async {
+      final auth = AuthServiceMock();
+      await auth.login(const LoginRequest('a@b.com', '12345678'));
+      addTearDown(auth.dispose);
+      final service = PublicacionServiceMock();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MascotasPage(
+            auth: auth,
+            service: service,
+            ubicacion: UbicacionServiceMock(),
+            soloMias: soloMias,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final esperados = <String, String>{
+        if (!soloMias) 'estado': '1',
+        (soloMias ? 'mascoteroId' : 'excluirMascoteroId'):
+            auth.usuario!.mascotero.id,
+      };
+      expect(service.filtros, esperados);
+      await tapVisible(tester, find.text('Perro'));
+      expect(service.filtros, {...esperados, 'tipoMascota': '1'});
+    });
+  }
   for (final tipo in [1, 2, 3, 4]) {
     testWidgets(
       'Detalle del aviso $tipo muestra valores informados sin sesión',

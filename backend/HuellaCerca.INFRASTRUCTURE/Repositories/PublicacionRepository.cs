@@ -38,6 +38,7 @@ public sealed class PublicacionRepository(AppDbContext db) : IPublicacionReposit
         if (q.LocalidadId.HasValue) query = query.Where(x => x.LocalidadId == q.LocalidadId);
         if (q.ProvinciaId.HasValue) query = query.Where(x => x.Localidad.ProvinciaId == q.ProvinciaId);
         if (q.MascoteroId.HasValue) query = query.Where(x => x.MascoteroId == q.MascoteroId);
+        if (q.ExcluirMascoteroId.HasValue) query = query.Where(x => x.MascoteroId != q.ExcluirMascoteroId);
         // Adopción usa el día de publicación en Argentina; perdidas/encontradas el del suceso.
         if (q.FechaDesde.HasValue)
         {

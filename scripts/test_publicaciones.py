@@ -107,6 +107,10 @@ detail = call("GET", "/api/publicaciones/" + first["id"])
 assert {k: v for k, v in detail.items() if k != "fechaCreacion"} == {
     k: v for k, v in first.items() if k != "fechaCreacion"}
 assert search()["total"] == 2
+assert search(excluirMascoteroId=a["usuario"]["mascotero"]["id"])["total"] == 0
+assert search(excluirMascoteroId=b["usuario"]["mascotero"]["id"])["total"] == 2
+assert search(excluirMascoteroId=b["usuario"]["mascotero"]["id"], tamanoPagina=1)["total"] == 2
+assert len(search(excluirMascoteroId=b["usuario"]["mascotero"]["id"], tamanoPagina=1)["items"]) == 1
 for filters in ({"tipoPublicacion": 1}, {"tipoMascota": 2}, {"fechaDesde": today.isoformat()},
                 {"fechaHasta": (today - datetime.timedelta(days=1)).isoformat()}):
     assert search(**filters)["total"] == 1

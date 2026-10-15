@@ -42,6 +42,7 @@ public sealed class PublicacionesQuery : IValidatableObject
     public Guid? ProvinciaId { get; set; }
     public Guid? LocalidadId { get; set; }
     public Guid? MascoteroId { get; set; }
+    public Guid? ExcluirMascoteroId { get; set; }
     [StringLength(250)] public string? Zona { get; set; }
     public DateOnly? FechaDesde { get; set; }
     public DateOnly? FechaHasta { get; set; }

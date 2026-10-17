@@ -41,6 +41,11 @@ services:
       Jwt__Audience: HuellaCercaMobile
       Jwt__AccessMinutes: "15"
       Jwt__RefreshDays: "30"
+      Brevo__Enabled: ${BREVO_ENABLED:-false}
+      Brevo__BaseUrl: ${BREVO_BASE_URL:-https://api.brevo.com/v3/}
+      Brevo__SenderEmail: ${BREVO_SENDER_EMAIL:-no-reply@huellacerca.online}
+      Brevo__SenderName: ${BREVO_SENDER_NAME:-Huella Cerca}
+      Brevo__ApiKey: ${BREVO_API_KEY:-}
       R2__Enabled: ${R2_ENABLED:-false}
       R2__Endpoint: ${R2_ENDPOINT:-}
       R2__Bucket: ${R2_BUCKET:-}

@@ -15,6 +15,17 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddSingleton<IEmailTemplates, EmailTemplates>();
+
+builder.Services.AddOptions<HuellaCerca.INFRASTRUCTURE.Email.BrevoOptions>()
+    .Bind(builder.Configuration.GetSection("Brevo"))
+    .Validate(x => x.EsValida(), "Brevo requiere BaseUrl HTTPS, SenderEmail, SenderName y ApiKey válidos al habilitar correos.")
+    .ValidateOnStart();
+builder.Services.AddHttpClient<IEmailService, HuellaCerca.INFRASTRUCTURE.Email.BrevoEmailService>(client =>
+    client.Timeout = TimeSpan.FromSeconds(20))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false })
+    .RedactLoggedHeaders(new[] { "api-key" });
+
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
 builder.Services.AddProblemDetails();

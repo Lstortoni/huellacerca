@@ -602,6 +602,55 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                     b.ToTable("recomendaciones_aspectos", (string)null);
                 });
 
+            modelBuilder.Entity("HuellaCerca.MODEL.RecuperacionPassword", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodigoHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("CodigoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CodigoVerificado")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Envios")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FechaExpiracion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaSolicitud")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaUso")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("IntentosFallidos")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PermisoExpira")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PermisoHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("VentanaEnvios")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UsuarioId");
+
+                    b.HasIndex("PermisoHash")
+                        .IsUnique();
+
+                    b.ToTable("recuperaciones_password", (string)null);
+                });
+
             modelBuilder.Entity("HuellaCerca.MODEL.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -627,6 +676,9 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                         .HasColumnType("character varying(64)");
 
                     b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VersionSeguridad")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -733,6 +785,9 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
 
                     b.Property<DateTime?>("UltimoAcceso")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("VersionSeguridad")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -925,6 +980,17 @@ namespace HuellaCerca.INFRASTRUCTURE.Migrations
                     b.Navigation("AspectoRecomendacion");
 
                     b.Navigation("Recomendacion");
+                });
+
+            modelBuilder.Entity("HuellaCerca.MODEL.RecuperacionPassword", b =>
+                {
+                    b.HasOne("HuellaCerca.MODEL.Usuario", "Usuario")
+                        .WithOne()
+                        .HasForeignKey("HuellaCerca.MODEL.RecuperacionPassword", "UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("HuellaCerca.MODEL.RefreshToken", b =>

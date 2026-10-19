@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.22" />
+    <ProjectReference Include="../HuellaCerca.API/HuellaCerca.API.csproj" />
+  </ItemGroup>
+</Project>

@@ -17,7 +17,8 @@ public sealed class PushRepository(AppDbContext db) : IPushRepository
         await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(72409102)", ct);
         var now = DateTime.UtcNow;
         if (!await db.RefreshTokens.AnyAsync(x => x.SesionId == sesion && x.Usuario.MascoteroId == autor
-            && x.Usuario.Activo && x.FechaRevocacion == null && x.FechaExpiracion > now, ct))
+            && x.Usuario.Activo && x.VersionSeguridad == x.Usuario.VersionSeguridad
+            && x.FechaRevocacion == null && x.FechaExpiracion > now, ct))
             throw new AppException(401, "La sesión no está activa.");
         await db.DispositivosPush.Where(x => x.Token == request.Token && x.Id != instalacion && x.Activo)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Activo, false), ct);
@@ -61,7 +62,8 @@ public sealed class PushRepository(AppDbContext db) : IPushRepository
         var d = await db.DispositivosPush.AsNoTracking().SingleAsync(x => x.Id == envio.DispositivoPushId, ct);
         var vigente = d.Activo && d.Version == envio.VersionDispositivo && d.MascoteroId == n.MascoteroId
             && await db.RefreshTokens.AnyAsync(x => x.SesionId == d.SesionId && x.Usuario.MascoteroId == d.MascoteroId
-                && x.Usuario.Activo && x.FechaRevocacion == null && x.FechaExpiracion > now, ct);
+                && x.Usuario.Activo && x.VersionSeguridad == x.Usuario.VersionSeguridad
+                && x.FechaRevocacion == null && x.FechaExpiracion > now, ct);
         if (!vigente || n.FechaLectura != null || envio.FechaCreacion < now.AddHours(-24) || envio.Intentos >= 5)
         {
             envio.FechaFinalizacion = now;

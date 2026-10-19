@@ -6,6 +6,7 @@ public sealed class Usuario
     public Guid MascoteroId { get; set; }
     public string Email { get; set; } = "";
     public string PasswordHash { get; set; } = "";
+    public Guid VersionSeguridad { get; set; }
     public bool EmailConfirmado { get; set; }
     public bool Activo { get; set; } = true;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;

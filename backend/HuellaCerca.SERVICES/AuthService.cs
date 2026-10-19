@@ -47,7 +47,8 @@ public sealed class AuthService(IAuthRepository repository, ICredenciales creden
             await repository.RevocarSesionAsync(current.SesionId, now, ct);
             throw new AppException(401, "La sesión no se puede renovar.");
         }
-        if (current.FechaExpiracion <= now || !current.Usuario.Activo)
+        if (current.FechaExpiracion <= now || !current.Usuario.Activo
+            || current.VersionSeguridad != current.Usuario.VersionSeguridad)
             throw new AppException(401, "La sesión no se puede renovar.");
         current.FechaRevocacion = now;
         var response = CrearSesion(current.Usuario, current.SesionId, current.FechaExpiracion);
@@ -74,6 +75,7 @@ public sealed class AuthService(IAuthRepository repository, ICredenciales creden
         var now = DateTime.UtcNow;
         var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
         var token = new RefreshToken { UsuarioId = user.Id, Usuario = user, TokenHash = Hash(raw),
+            VersionSeguridad = user.VersionSeguridad,
             SesionId = sesionId ?? Guid.NewGuid(), FechaCreacion = now,
             FechaExpiracion = expires ?? now.AddDays(credenciales.RefreshDias) };
         repository.Agregar(token);

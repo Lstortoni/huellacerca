@@ -22,7 +22,8 @@ public sealed class Credenciales(IOptions<JwtSettings> options) : ICredenciales
         var now = DateTime.UtcNow;
         var expires = now.AddMinutes(settings.AccessMinutes);
         var claims = new[] { new Claim("sub", usuario.Id.ToString()), new Claim("mascoteroId", usuario.MascoteroId.ToString()),
-            new Claim("sid", sesionId.ToString()), new Claim("jti", Guid.NewGuid().ToString()) };
+            new Claim("sid", sesionId.ToString()), new Claim("jti", Guid.NewGuid().ToString()),
+            new Claim("sv", usuario.VersionSeguridad.ToString()) };
         var token = new JwtSecurityToken(settings.Issuer, settings.Audience, claims, now, expires,
             new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key)), SecurityAlgorithms.HmacSha256));
         return (new JwtSecurityTokenHandler().WriteToken(token), expires);

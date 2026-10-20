@@ -17,6 +17,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace HuellaCerca.Recuperacion.Tests;
 
@@ -27,7 +29,25 @@ internal static class Checks
 
     public static async Task Main()
     {
-        var connection = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")!;
+        var source = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")!;
+        var name = "hc_recovery_" + Guid.NewGuid().ToString("N");
+        await using var admin = new NpgsqlConnection(source);
+        await admin.OpenAsync();
+        await using (var command = new NpgsqlCommand($"CREATE DATABASE {name}", admin)) await command.ExecuteNonQueryAsync();
+        var connection = new NpgsqlConnectionStringBuilder(source) { Database = name }.ConnectionString;
+        Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", connection);
+        Environment.SetEnvironmentVariable("ASPNETCORE_TEST_CONTENTROOT_HUELLACERCA_API", Path.GetFullPath("HuellaCerca.API"));
+        try { await Run(connection); }
+        finally
+        {
+            NpgsqlConnection.ClearAllPools();
+            await using var command = new NpgsqlCommand($"DROP DATABASE {name} WITH (FORCE)", admin);
+            await command.ExecuteNonQueryAsync();
+        }
+    }
+
+    private static async Task Run(string connection)
+    {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connection).Options;
         AppDbContext Db() => new(options);
         await using (var db = Db()) await db.Database.MigrateAsync();
@@ -154,8 +174,15 @@ internal static class Checks
             {
                 s.RemoveAll<IEmailService>();
                 s.AddSingleton<IEmailService>(email);
-                if (sinLimite) s.Configure<RateLimiterOptions>(o =>
-                    o.AddPolicy("recuperacion", _ => RateLimitPartition.GetNoLimiter("pruebas")));
+                if (sinLimite)
+                {
+                    s.RemoveAll<IConfigureOptions<RateLimiterOptions>>();
+                    s.Configure<RateLimiterOptions>(o =>
+                    {
+                        foreach (var name in new[] { "recuperacion", "auth", "fotos" })
+                            o.AddPolicy(name, _ => RateLimitPartition.GetNoLimiter("pruebas"));
+                    });
+                }
             });
         });
 }

@@ -45,6 +45,17 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _recuperarPassword() async {
+    final completado = await Navigator.of(context)
+        .pushNamed('/recuperar-password', arguments: _email.text.trim());
+    if (mounted && completado == true) {
+      setState(() {
+        _password.clear();
+        _error = null;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: BarraSuperior(auth: widget.auth, titulo: 'Ingresar'),
@@ -114,6 +125,10 @@ class _LoginPageState extends State<LoginPage> {
                         validator: (v) => v == null || v.isEmpty
                             ? 'Ingresá tu contraseña.'
                             : null,
+                      ),
+                      TextButton(
+                        onPressed: _cargando ? null : _recuperarPassword,
+                        child: const Text('¿Olvidaste tu contraseña?'),
                       ),
                       const SizedBox(height: 20),
                       if (_error != null)

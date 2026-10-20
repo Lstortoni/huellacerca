@@ -7,6 +7,8 @@ import '../../services/implementations/push_service_api.dart';
 import '../../services/implementations/mensajeria_push_firebase.dart';
 
 import '../../services/contracts/auth_service.dart';
+import '../../services/contracts/recuperacion_service.dart';
+import '../../services/implementations/recuperacion_service_api.dart';
 import '../../services/contracts/ubicacion_service.dart';
 import '../../services/contracts/publicacion_service.dart';
 import '../../services/contracts/recomendacion_service.dart';
@@ -42,6 +44,9 @@ void configurarServicios({
   );
   getIt.registerLazySingleton<SessionStorage>(
     () => sessionStorage ?? SecureSessionStorage(),
+  );
+  getIt.registerLazySingleton<RecuperacionService>(
+    () => RecuperacionServiceApi(getIt<ApiClient>()),
   );
   getIt.registerLazySingleton<AuthService>(
     () => AuthServiceApi(

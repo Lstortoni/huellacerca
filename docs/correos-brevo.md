@@ -1,6 +1,6 @@
 # Correo transaccional con Brevo
 
-Esta etapa incorpora el transporte de correo. No implementa todavía recuperación de contraseña, pantallas ni endpoints de envío. No requiere migración ni contenedor adicional. Habilitarlo no envía correos por sí solo.
+El transporte de correo y las plantillas están implementados. El flujo que los utiliza está documentado en [recuperación de contraseña](recuperacion-password.md), incluyendo endpoints, migración y pantallas Flutter. Habilitar Brevo no envía correos por sí solo.
 
 ## Configuración privada
 
@@ -68,4 +68,4 @@ docker run --rm huellacerca-email-check dotnet run --project HuellaCerca.Email.T
 docker run --rm huellacerca-email-check dotnet build HuellaCerca.API -c Release --no-restore
 ```
 
-La prueba real queda pendiente de cargar credenciales y acordar destinatario. No se agregó un endpoint público de envío arbitrario. El siguiente bloque implementará la recuperación y consumirá este contrato.
+La prueba real se realiza desde el flujo de recuperación con una cuenta local y un destinatario autorizado por el usuario. No se agregó un endpoint público de envío arbitrario.

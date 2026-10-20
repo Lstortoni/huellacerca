@@ -12,6 +12,8 @@ import 'services/contracts/auth_service.dart';
 import 'services/contracts/ubicacion_service.dart';
 import 'pages/inicio_page.dart';
 import 'pages/login_page.dart';
+import 'pages/recuperar_password_page.dart';
+import 'services/contracts/recuperacion_service.dart';
 import 'pages/registro_page.dart';
 import 'pages/perfil_page.dart';
 import 'pages/mascotas_page.dart';
@@ -217,6 +219,11 @@ class _HuellaCercaAppState extends State<HuellaCercaApp> {
     home: InicioPage(auth: getIt<AuthService>()),
     routes: {
       '/login': (_) => LoginPage(auth: getIt<AuthService>()),
+      '/recuperar-password': (context) => RecuperarPasswordPage(
+        service: getIt<RecuperacionService>(),
+        emailInicial:
+            ModalRoute.of(context)?.settings.arguments as String? ?? '',
+      ),
       '/registro': (_) => RegistroPage(
         auth: getIt<AuthService>(),
         ubicacion: getIt<UbicacionService>(),

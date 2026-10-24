@@ -116,7 +116,8 @@ void main() {
         await tapVisible(tester, find.text('Editar aviso'));
         expect(find.text('Tipo de aviso'), findsOneWidget);
         expect(find.text('Elegir foto'), findsNothing);
-        expect(find.text('La Plata'), findsOneWidget); // Ubicación precargada.
+        // Ubicación precargada desde el aviso, no desde el perfil.
+        expect(find.text('La Plata, Buenos Aires'), findsOneWidget);
         final descripcion = find.widgetWithText(TextFormField, 'Descripción');
         expect(
           tester.widget<TextFormField>(descripcion).controller!.text,

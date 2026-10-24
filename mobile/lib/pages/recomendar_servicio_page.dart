@@ -384,6 +384,9 @@ class _RecomendarServicioPageState extends State<RecomendarServicioPage> {
                             service: widget.ubicacion,
                             obligatorio: true,
                             enabled: !_guardando,
+                            localidadPerfilId:
+                                widget.auth.usuario?.mascotero.localidadId,
+                            precargarPerfil: true,
                             onChanged: (_, l) {
                               _localidad = l;
                               _invalidar();

@@ -82,8 +82,9 @@ Las ejecuciones posteriores actualizan por GeorefId y conservan los UUID locales
 - `GET /api/paises`: países activos.
 - `GET /api/provincias?paisCodigo=AR`: provincias activas; AR es el valor predeterminado.
 - `GET /api/localidades?provinciaId=UUID&busqueda=cordoba&pagina=1&tamanoPagina=20`: localidades activas, búsqueda parcial sin distinguir acentos o mayúsculas.
+- `GET /api/localidades/{id}`: una localidad activa con su provincia; 404 si no existe.
 
-Localidades devuelve `items`, `total`, `pagina` y `tamanoPagina`. ProvinciaId es obligatorio; tamaño de página entre 1 y 100, por defecto 20. Los parámetros inválidos devuelven 400; una provincia inexistente o inactiva, 404. Una búsqueda sin coincidencias devuelve 200 con una lista vacía. Los DTO no exponen propiedades de navegación ni ciclos de EF.
+Localidades devuelve `items`, `total`, `pagina` y `tamanoPagina`; cada item incluye `provinciaId` y el nombre de la `provincia`. ProvinciaId es opcional: sin él se busca en todo el país y la búsqueda necesita al menos 2 letras. Primero aparecen las localidades que empiezan con el texto y después las que lo contienen. Tamaño de página entre 1 y 100, por defecto 20. Los parámetros inválidos devuelven 400; una provincia inexistente o inactiva, 404. Una búsqueda sin coincidencias devuelve 200 con una lista vacía. Los DTO no exponen propiedades de navegación ni ciclos de EF.
 
 ### Crear una migración futura sin dotnet en Windows
 
@@ -143,7 +144,7 @@ El cierre de sesión revoca los refresh de esa sesión. El JWT ya emitido puede 
 
 Los endpoints de autenticación tienen un límite de 60 solicitudes por minuto por IP y devuelven 429 al superarlo. Es un límite local en memoria; una instalación con varias réplicas necesitará control compartido. La API local usa HTTP; el despliegue externo deberá servir autenticación mediante HTTPS.
 
-El proyecto Flutter está en `mobile/`, con inicio público y una barra de cuenta compartida. Incluye ingreso, registro con provincia/localidad, perfil de solo lectura, almacenamiento seguro de sesión, renovación y cierre de sesión. Consultar [la guía de Flutter](mobile/README.md) para ejecutarlo, configurar la URL, entender sus carpetas y probar el recorrido completo contra la API local.
+El proyecto Flutter está en `mobile/`, con inicio público y una barra de cuenta compartida. Incluye ingreso, registro con localidad, perfil de solo lectura, almacenamiento seguro de sesión, renovación y cierre de sesión. Consultar [la guía de Flutter](mobile/README.md) para ejecutarlo, configurar la URL, entender sus carpetas y probar el recorrido completo contra la API local.
 
 .NET 8 se conserva inicialmente por coherencia con el proyecto de referencia. Revisar la versión objetivo y su soporte antes del despliegue.
 

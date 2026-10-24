@@ -84,14 +84,31 @@ class UbicacionServiceMock implements UbicacionService {
     ];
   }
 
+  static const localidad = LocalidadDto(
+    'localidad-demo',
+    'Localidad simulada',
+    'provincia-demo',
+    'Provincia simulada',
+  );
+  final busquedas = <String>[];
+  final List<LocalidadDto> guardadas = [];
+
   @override
-  Future<LocalidadesPagina> getLocalidades(
-    String provinciaId, {
+  Future<LocalidadesPagina> getLocalidades({
+    String? provinciaId,
     String busqueda = '',
     int pagina = 1,
-  }) async => LocalidadesPagina([
-    LocalidadDto('localidad-demo', 'Localidad simulada', provinciaId),
-  ], 1);
+  }) async {
+    busquedas.add(busqueda);
+    return const LocalidadesPagina([localidad], 1);
+  }
+
+  @override
+  Future<LocalidadDto> getLocalidad(String id) async => localidad;
+  @override
+  Future<List<LocalidadDto>> recientes() async => List.of(guardadas);
+  @override
+  Future<void> recordar(LocalidadDto l) async => guardadas.insert(0, l);
 }
 
 /// El inicio todavía consulta health. Las demás consultas deben pasar por servicios.

@@ -19,6 +19,7 @@ import '../../services/implementations/ubicacion_service_api.dart';
 import '../config/api_config.dart';
 import '../network/api_client.dart';
 import '../network/http_api_client.dart';
+import '../storage/preferencias_locales.dart';
 import '../storage/session_storage.dart';
 import '../storage/secure_session_storage.dart';
 import '../../services/contracts/acciones_externas.dart';
@@ -70,7 +71,7 @@ void configurarServicios({
     );
   }
   getIt.registerLazySingleton<UbicacionService>(
-    () => UbicacionServiceApi(getIt<ApiClient>()),
+    () => UbicacionServiceApi(getIt<ApiClient>(), const PreferenciasSeguras()),
   );
   getIt.registerLazySingleton<PublicacionService>(
     () => PublicacionServiceApi(

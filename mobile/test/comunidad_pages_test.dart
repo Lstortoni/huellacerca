@@ -7,7 +7,9 @@ import 'package:huella_cerca/pages/publicacion_detalle_page.dart';
 import 'package:huella_cerca/pages/publicar_mascota_page.dart';
 import 'package:huella_cerca/pages/recomendar_servicio_page.dart';
 import 'package:huella_cerca/pages/prestador_detalle_page.dart';
+import 'package:huella_cerca/widgets/campo_ubicacion.dart';
 import 'package:huella_cerca/widgets/opcion_tipo_aviso.dart';
+import 'package:huella_cerca/widgets/selector_ubicacion.dart';
 
 import 'support/service_mocks.dart';
 import 'support/comunidad_mocks.dart';
@@ -19,15 +21,30 @@ Future<void> tapVisible(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> elegirLocalidad(WidgetTester tester) async {
-  await tapVisible(
-    tester,
-    find.widgetWithText(DropdownButtonFormField<String>, 'Provincia'),
+/// Abre el buscador de ubicación, escribe y elige [opcion].
+Future<void> elegirLocalidad(
+  WidgetTester tester, {
+  String busqueda = 'Lo',
+  String opcion = 'Localidad simulada',
+}) async {
+  await tapVisible(tester, find.byType(CampoUbicacion).first);
+  await tester.enterText(
+    find.descendant(
+      of: find.byType(SelectorUbicacion),
+      matching: find.byType(TextField),
+    ),
+    busqueda,
   );
-  await tester.tap(find.text('Provincia simulada').last);
+  await tester.pump(const Duration(milliseconds: 350)); // Espera al tipear.
   await tester.pumpAndSettle();
-  await tapVisible(tester, find.text('Elegir localidad'));
-  await tester.tap(find.text('Localidad simulada'));
+  await tester.tap(
+    find
+        .descendant(
+          of: find.byType(SelectorUbicacion),
+          matching: find.text(opcion),
+        )
+        .first,
+  );
   await tester.pumpAndSettle();
 }
 

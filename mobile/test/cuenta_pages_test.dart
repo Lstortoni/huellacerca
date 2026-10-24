@@ -7,11 +7,7 @@ import 'package:http/testing.dart';
 
 import 'support/test_app.dart';
 
-import 'package:huella_cerca/models/provincia_dto.dart';
-import 'package:huella_cerca/core/network/http_api_client.dart';
-import 'package:huella_cerca/services/implementations/ubicacion_service_api.dart';
-import 'package:huella_cerca/widgets/selector_localidad.dart';
-
+import 'comunidad_pages_test.dart' show elegirLocalidad;
 import 'support/auth_fakes.dart';
 
 http.Response json(Object? data, [int status = 200]) => http.Response(
@@ -67,21 +63,10 @@ void main() {
       await tester.ensureVisible(fields.at(i));
       await tester.enterText(fields.at(i), values[i]);
     }
-    final province = find.byType(DropdownButtonFormField<ProvinciaDto>);
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
-    await tester.ensureVisible(province);
-    await tester.pumpAndSettle();
-    await tester.tap(province);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Córdoba').last);
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Elegir localidad'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Elegir localidad'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Villa Prueba'));
-    await tester.pumpAndSettle();
+    // Sin elegir provincia: se escribe la ciudad directamente.
+    await elegirLocalidad(tester, busqueda: 'Villa', opcion: 'Villa Prueba');
     await tester.ensureVisible(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Crear cuenta'));
@@ -193,49 +178,4 @@ void main() {
     expect(find.text('Elegí una localidad.'), findsOneWidget);
     expect(registrations, 0);
   });
-
-  testWidgets(
-    'Localidades permite buscar y avanzar más allá de la primera página',
-    (tester) async {
-      final requests = <Map<String, String>>[];
-      final api = HttpApiClient(
-        baseUrl: 'http://localhost/',
-        client: MockClient((r) async {
-          requests.add(r.url.queryParameters);
-          final page = r.url.queryParameters['pagina'];
-          return json({
-            'items': [
-              {
-                'id': 'l$page',
-                'nombre': 'Localidad $page',
-                'provinciaId': 'p1',
-              },
-            ],
-            'total': 21,
-          });
-        }),
-      );
-      addTearDown(api.close);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SelectorLocalidad(
-              ubicacion: UbicacionServiceApi(api),
-              provinciaId: 'p1',
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Página siguiente'));
-      await tester.pumpAndSettle();
-      expect(find.text('Localidad 2'), findsOneWidget);
-      await tester.enterText(find.byType(TextField), 'villa');
-      await tester.tap(find.byTooltip('Buscar'));
-      await tester.pumpAndSettle();
-      expect(requests.last, containsPair('pagina', '1'));
-      expect(requests.last, containsPair('busqueda', 'villa'));
-      expect(requests.last, containsPair('provinciaId', 'p1'));
-    },
-  );
 }

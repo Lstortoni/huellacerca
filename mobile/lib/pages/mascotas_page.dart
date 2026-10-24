@@ -321,6 +321,9 @@ class _MascotasPageState extends State<MascotasPage> {
         CampoUbicacion(
           key: ValueKey(_revisionUbicacion),
           service: widget.ubicacion,
+          permitirProvincia: true,
+          etiqueta: 'Localidad o provincia',
+          localidadPerfilId: widget.auth.usuario?.mascotero.localidadId,
           onChanged: (p, l) {
             _provincia = p;
             _localidad = l;

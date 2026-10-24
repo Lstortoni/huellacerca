@@ -34,11 +34,7 @@ class RecomendacionesPage extends StatefulWidget {
 class _RecomendacionesPageState extends State<RecomendacionesPage> {
   final _texto = TextEditingController();
   late Future<List<RubroDto>> _rubros;
-  String? _rubro, _provincia, _localidad, _lugar;
-  // Lugar aplicado: el panel puede tener una selección aún sin aplicar.
-  String? _lugarAplicado;
-  int _revisionUbicacion = 0;
-  bool _panelAbierto = false;
+  String? _rubro, _provincia, _localidad;
   Map<String, String> _filtros = {};
   int _revision = 0;
   @override
@@ -54,8 +50,6 @@ class _RecomendacionesPageState extends State<RecomendacionesPage> {
   }
 
   void _buscar() => setState(() {
-    _panelAbierto = false;
-    _lugarAplicado = _provincia == null ? null : (_lugar ?? 'Ubicación');
     _filtros = {
       if (_texto.text.trim().isNotEmpty) 'busqueda': _texto.text.trim(),
       'rubroId': ?_rubro,
@@ -64,14 +58,6 @@ class _RecomendacionesPageState extends State<RecomendacionesPage> {
     };
     _revision++;
   });
-
-  void _quitarUbicacion() {
-    setState(() {
-      _provincia = _localidad = _lugar = null;
-      _revisionUbicacion++;
-    });
-    _buscar();
-  }
 
   Widget _barraBusqueda() => TextField(
     controller: _texto,
@@ -130,44 +116,10 @@ class _RecomendacionesPageState extends State<RecomendacionesPage> {
     },
   );
 
-  Widget _panelUbicacion(ThemeData theme) => Padding(
-    padding: const EdgeInsets.only(top: 10),
-    child: Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            CampoUbicacion(
-              key: ValueKey(_revisionUbicacion),
-              service: widget.ubicacion,
-              onChanged: (p, l) {
-                _provincia = p;
-                _localidad = l;
-              },
-              onDescripcion: (d) => _lugar = d,
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: _buscar,
-              child: const Text('Aplicar ubicación'),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-
   @override
   Widget build(BuildContext context) => TemaServicios(
     child: Builder(
       builder: (context) {
-        final theme = Theme.of(context);
         return Scaffold(
           appBar: BarraSuperior(
             auth: widget.auth,
@@ -181,29 +133,17 @@ class _RecomendacionesPageState extends State<RecomendacionesPage> {
                 const SizedBox(height: 12),
                 _grillaRubros(),
                 const SizedBox(height: 12),
-                FilledButton.tonalIcon(
-                  onPressed: _panelAbierto
-                      ? _buscar
-                      : () => setState(() => _panelAbierto = true),
-                  icon: Icon(
-                    _panelAbierto
-                        ? Icons.expand_less_rounded
-                        : Icons.location_on_rounded,
-                  ),
-                  label: Text('Ubicación: ${_lugarAplicado ?? 'todas'}'),
-                ),
-                if (!_panelAbierto && _lugarAplicado != null)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: _quitarUbicacion,
-                      child: const Text('Quitar ubicación'),
-                    ),
-                  ),
-                Visibility(
-                  visible: _panelAbierto,
-                  maintainState: true,
-                  child: _panelUbicacion(theme),
+                // Se aplica al elegir; la ✕ del campo quita el filtro.
+                CampoUbicacion(
+                  service: widget.ubicacion,
+                  permitirProvincia: true,
+                  etiqueta: 'Localidad o provincia',
+                  localidadPerfilId: widget.auth.usuario?.mascotero.localidadId,
+                  onChanged: (p, l) {
+                    _provincia = p;
+                    _localidad = l;
+                    _buscar();
+                  },
                 ),
                 const SizedBox(height: 16),
                 ListaPaginada<PrestadorDto>(

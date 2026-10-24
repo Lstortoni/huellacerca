@@ -37,7 +37,9 @@ void main() {
       try {
         await auth.restaurar();
         final provincias = await ubicacion.getProvincias();
-        final localidades = await ubicacion.getLocalidades(provincias.first.id);
+        final localidades = await ubicacion.getLocalidades(
+          provinciaId: provincias.first.id,
+        );
         await auth.registrar(
           RegisterRequest(
             nombre: 'Prueba',

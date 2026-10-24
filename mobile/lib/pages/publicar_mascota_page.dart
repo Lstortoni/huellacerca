@@ -95,6 +95,7 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
         p.localidadId,
         p.localidad,
         p.provinciaId,
+        p.provincia,
       );
       _caracteristicas.addAll(p.caracteristicas);
       _inicial = _solicitudEdicion().toJson();
@@ -606,6 +607,9 @@ class _PublicarMascotaPageState extends State<PublicarMascotaPage> {
           obligatorio: true,
           enabled: !_ocupado,
           localidadInicial: _localidadInicial,
+          // Al publicar, la mayoría lo hace cerca de donde vive.
+          localidadPerfilId: widget.auth.usuario?.mascotero.localidadId,
+          precargarPerfil: !_editando,
           onChanged: (_, l) => _localidad = l,
         ),
         const SizedBox(height: 14),

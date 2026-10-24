@@ -15,13 +15,20 @@ public sealed class UbicacionService(IUbicacionRepository repository) : IUbicaci
 
     public async Task<PaginaDto<LocalidadDto>?> GetLocalidadesAsync(LocalidadesQuery query, CancellationToken ct)
     {
-        if (query.ProvinciaId is null || query.ProvinciaId == Guid.Empty)
-            throw new ArgumentException("La provincia es obligatoria.");
-        if (!await repository.ProvinciaActivaExisteAsync(query.ProvinciaId.Value, ct)) return null;
-        var (items, total) = await repository.GetLocalidadesAsync(query.ProvinciaId.Value,
-            query.Busqueda?.Trim(), query.Pagina, query.TamanoPagina, ct);
-        return new(items.Select(x => new LocalidadDto(x.Id, x.Nombre, x.ProvinciaId)).ToList(),
-            total, query.Pagina, query.TamanoPagina);
+        var busqueda = query.Busqueda?.Trim();
+        if (query.ProvinciaId == Guid.Empty || (query.ProvinciaId is null && (busqueda?.Length ?? 0) < 2))
+            throw new ArgumentException("Indicá una provincia o al menos 2 letras de búsqueda.");
+        if (query.ProvinciaId is { } provincia && !await repository.ProvinciaActivaExisteAsync(provincia, ct))
+            return null;
+        var (items, total) = await repository.GetLocalidadesAsync(query.ProvinciaId,
+            busqueda, query.Pagina, query.TamanoPagina, ct);
+        return new(items.Select(ToDto).ToList(), total, query.Pagina, query.TamanoPagina);
     }
+
+    public async Task<LocalidadDto?> GetLocalidadAsync(Guid id, CancellationToken ct) =>
+        await repository.GetLocalidadActivaAsync(id, ct) is { } localidad ? ToDto(localidad) : null;
+
+    private static LocalidadDto ToDto(HuellaCerca.MODEL.Localidad x) =>
+        new(x.Id, x.Nombre, x.ProvinciaId, x.Provincia.Nombre);
 }
 

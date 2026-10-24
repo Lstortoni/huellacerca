@@ -8,7 +8,7 @@ Los cuatro tipos de aviso permiten características opcionales. Para Busco adopt
 
 El detalle muestra solo las características informadas, usando las etiquetas de la API. En Busco adoptar se titulan Características que busca. La búsqueda y Mis publicaciones permiten filtros opcionales por características al seleccionar especie, con Cualquiera y Quitar filtros de características. Cambiar especie limpia las selecciones. Los filtros son exactos, combinados con AND, y excluyen avisos sin ese dato; sin filtros se incluyen también los avisos anteriores. Un error del catálogo permite reintentar sin ocultar el resto del detalle. La instalación en Android la realiza el usuario.
 
-Inicio con tarjetas públicas de búsqueda y acciones de participación según la sesión. No consulta `/health` ni provincias para mostrarse. El icono de cuenta abre ingreso y registro; con sesión muestra perfil y cierre de sesión. El registro conserva la selección de provincia/localidad y crea la cuenta mediante la API.
+Inicio con tarjetas públicas de búsqueda y acciones de participación según la sesión. No consulta `/health` ni provincias para mostrarse. El icono de cuenta abre ingreso y registro; con sesión muestra perfil y cierre de sesión. El registro pide la localidad con el buscador nacional y crea la cuenta mediante la API.
 
 ## Dónde se programa
 
@@ -59,7 +59,7 @@ lib/
     recomendacion_dto.dart
   widgets/
     barra_superior.dart
-    selector_localidad.dart
+    selector_ubicacion.dart
     tarjeta_inicio.dart
     campo_ubicacion.dart
     contenido_formulario.dart
@@ -74,7 +74,7 @@ lib/
 - `services/contracts/`: operaciones y propiedades que conocen las páginas; no contienen la implementación.
 - `services/implementations/`: implementaciones API de esos contratos; dependen a su vez del contrato `ApiClient`.
 - `models/`: DTO que representan los datos enviados o recibidos de la API.
-- `widgets/`: piezas visuales reutilizables. Una página también es un widget, pero representa una pantalla completa. La barra se inserta en `Scaffold.appBar` y el selector de localidades es un diálogo.
+- `widgets/`: piezas visuales reutilizables. Una página también es un widget, pero representa una pantalla completa. La barra se inserta en `Scaffold.appBar` y el buscador de ubicación es una hoja inferior.
 - `provincia_dto.dart`: equivalente a un DTO C#. Define `id`, `nombre` y `paisCodigo`; `fromJson` convierte y valida el objeto recibido de la API.
 - `ubicacion_service.dart`: contrato que devuelve `Future<List<ProvinciaDto>>`, comparable con `Task<List<ProvinciaDto>>` en C#. `ubicacion_service_api.dart` conoce los endpoints y convierte los DTO.
 - `api_client.dart`: contrato de transporte, sin tipos del paquete HTTP. `http_api_client.dart` realiza HTTP, decodifica JSON y transforma errores en `ApiException`.
@@ -199,7 +199,14 @@ Los mocks viven en `test/support/`. Las pruebas de HTTP usan transporte y almace
 
 `SecureSessionStorage` guarda la respuesta de sesión en una única entrada de almacenamiento seguro; nunca guarda la contraseña. Usa [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage). Android tiene `allowBackup=false` siguiendo la configuración del paquete. Al abrir se recupera la sesión y se consulta el perfil; si el JWT venció se renueva. El vencimiento absoluto del refresh lo determina la API (30 días actualmente). Si una renovación falla se limpia la sesión para evitar reutilizar un refresh que pudo haber rotado; será necesario ingresar nuevamente. Un fallo de red al consultar el perfil, sin renovación, conserva la sesión.
 
-`SelectorLocalidad` consulta páginas de 20 resultados y permite buscar por nombre. Cambiar de provincia borra la localidad seleccionada para evitar una combinación incorrecta.
+### Ubicación
+
+Formularios y filtros usan un solo campo, `CampoUbicacion`. Al tocarlo abre `SelectorUbicacion`, un buscador en todo el país:
+
+- Con menos de 2 letras sugiere la localidad del perfil y las últimas 5 elegidas. Las recientes se guardan en el dispositivo (`PreferenciasLocales`).
+- Desde 2 letras busca, con 300 ms de espera entre teclas. Cada resultado muestra la provincia debajo y la lista carga más páginas al desplazarse.
+- En los filtros (`permitirProvincia`) también ofrece provincias enteras ("Toda la provincia") y el campo se puede quitar con ✕.
+- Publicar un aviso y recomendar un servicio arrancan con la localidad del perfil (`precargarPerfil`). Al editar se usa la del aviso.
 
 La edición de perfil, recuperación de contraseña y subida de fotografías quedan pendientes. La autenticación está preparada y probada inicialmente en Android; iOS necesita su verificación y configuración en macOS antes de publicarse.
 

@@ -36,8 +36,20 @@ assert page1["total"] == page2["total"]
 assert not ({x["id"] for x in page1["items"]} & {x["id"] for x in page2["items"]})
 empty = get(path + "&busqueda=zzzzhuellacercasincoincidencias")
 assert empty["items"] == [] and empty["total"] == 0
+assert all(x["provincia"] == "Córdoba" for x in lower["items"]), "Incluye el nombre de la provincia."
+# Sin provincia busca en todo el país; primero las que empiezan con lo escrito.
+pais = get("/api/localidades?busqueda=la%20plata&tamanoPagina=100")
+assert pais["total"] > 0
+assert pais["items"][0]["nombre"].upper().startswith("LA PLATA"), pais["items"][0]
+nombres = [x["nombre"].upper() for x in pais["items"]]
+primera_que_no_empieza = next((i for i, n in enumerate(nombres) if not n.startswith("LA PLATA")), len(nombres))
+assert all(not n.startswith("LA PLATA") for n in nombres[primera_que_no_empieza:]), "Prefijos primero."
+assert len({x["provinciaId"] for x in get("/api/localidades?busqueda=san%20martin&tamanoPagina=100")["items"]}) > 1, \
+    "Búsqueda nacional devuelve localidades homónimas de varias provincias."
 for invalid in (
     "/api/localidades",
+    "/api/localidades?busqueda=l",
+    "/api/localidades?busqueda=%20%20",
     "/api/localidades?provinciaId=no-es-guid",
     "/api/localidades?provinciaId=00000000-0000-0000-0000-000000000000",
     path + "&tamanoPagina=101",
@@ -48,4 +60,7 @@ for invalid in (
 ):
     get(invalid, 400)
 get("/api/localidades?provinciaId=ffffffff-ffff-ffff-ffff-ffffffffffff", 404)
-print("OK: catálogo, búsqueda, acentos, filtro, paginación, Swagger y errores HTTP.")
+una = lower["items"][0]
+assert get("/api/localidades/" + una["id"]) == una, "Detalle de localidad con su provincia."
+get("/api/localidades/ffffffff-ffff-ffff-ffff-ffffffffffff", 404)
+print("OK: catálogo, búsqueda provincial y nacional, acentos, orden por prefijo, paginación, Swagger y errores HTTP.")

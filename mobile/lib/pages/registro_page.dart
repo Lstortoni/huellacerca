@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../core/network/api_exception.dart';
 import '../models/auth_dto.dart';
-import '../models/provincia_dto.dart';
-import '../models/localidad_dto.dart';
 import '../services/contracts/auth_service.dart';
 import '../services/contracts/ubicacion_service.dart';
 import '../widgets/barra_superior.dart';
-import '../widgets/selector_localidad.dart';
+import '../widgets/campo_ubicacion.dart';
 
 class RegistroPage extends StatefulWidget {
   const RegistroPage({super.key, required this.auth, required this.ubicacion});
@@ -22,16 +20,9 @@ class _RegistroPageState extends State<RegistroPage> {
   final _nombre = TextEditingController(), _apellido = TextEditingController();
   final _email = TextEditingController(), _telefono = TextEditingController();
   final _password = TextEditingController(), _confirm = TextEditingController();
-  List<ProvinciaDto> _provincias = [];
-  ProvinciaDto? _provincia;
-  LocalidadDto? _localidad;
-  bool _cargando = false, _cargandoProvincias = true;
-  String? _error, _errorProvincias;
-  @override
-  void initState() {
-    super.initState();
-    _cargarProvincias();
-  }
+  String? _localidad;
+  bool _cargando = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -46,25 +37,6 @@ class _RegistroPageState extends State<RegistroPage> {
       c.dispose();
     }
     super.dispose();
-  }
-
-  Future<void> _cargarProvincias() async {
-    setState(() {
-      _cargandoProvincias = true;
-      _errorProvincias = null;
-    });
-    try {
-      final provincias = await widget.ubicacion.getProvincias();
-      if (mounted) setState(() => _provincias = provincias);
-    } on ApiException catch (e) {
-      if (mounted) setState(() => _errorProvincias = e.message);
-    } catch (_) {
-      if (mounted) {
-        setState(() => _errorProvincias = 'No pudimos cargar provincias.');
-      }
-    } finally {
-      if (mounted) setState(() => _cargandoProvincias = false);
-    }
   }
 
   Future<void> _registrar() async {
@@ -84,7 +56,7 @@ class _RegistroPageState extends State<RegistroPage> {
           telefono: _telefono.text.trim().isEmpty
               ? null
               : _telefono.text.trim(),
-          localidadId: _localidad!.id,
+          localidadId: _localidad!,
         ),
       );
       if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
@@ -185,84 +157,12 @@ class _RegistroPageState extends State<RegistroPage> {
                         ? 'Las contraseñas no coinciden.'
                         : null,
                   ),
-                  if (_cargandoProvincias)
-                    const LinearProgressIndicator()
-                  else if (_errorProvincias != null) ...[
-                    Text(_errorProvincias!),
-                    TextButton(
-                      onPressed: _cargarProvincias,
-                      child: const Text('Reintentar provincias'),
-                    ),
-                  ] else if (_provincias.isEmpty) ...[
-                    const Text('Todavía no hay provincias disponibles.'),
-                    TextButton(
-                      onPressed: _cargarProvincias,
-                      child: const Text('Volver a consultar'),
-                    ),
-                  ] else
-                    DropdownButtonFormField<ProvinciaDto>(
-                      decoration: const InputDecoration(
-                        labelText: 'Provincia',
-                        border: OutlineInputBorder(),
-                      ),
-                      isExpanded: true,
-                      initialValue: _provincia,
-                      items: _provincias
-                          .map(
-                            (p) => DropdownMenuItem(
-                              value: p,
-                              child: Text(
-                                p.nombre,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: _cargando
-                          ? null
-                          : (p) => setState(() {
-                              _provincia = p;
-                              _localidad = null;
-                            }),
-                      validator: (p) =>
-                          p == null ? 'Elegí una provincia.' : null,
-                    ),
-                  const SizedBox(height: 16),
-                  FormField<LocalidadDto>(
-                    key: ValueKey(_provincia?.id),
-                    validator: (_) =>
-                        _localidad == null ? 'Elegí una localidad.' : null,
-                    builder: (field) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.location_on_outlined),
-                          label: Text(_localidad?.nombre ?? 'Elegir localidad'),
-                          onPressed: _provincia == null || _cargando
-                              ? null
-                              : () async {
-                                  final localidad =
-                                      await showDialog<LocalidadDto>(
-                                        context: context,
-                                        builder: (_) => SelectorLocalidad(
-                                          ubicacion: widget.ubicacion,
-                                          provinciaId: _provincia!.id,
-                                        ),
-                                      );
-                                  if (!mounted || localidad == null) return;
-                                  setState(() => _localidad = localidad);
-                                  field.didChange(localidad);
-                                },
-                        ),
-                        if (field.hasError)
-                          Text(
-                            field.errorText!,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                      ],
-                    ),
+                  CampoUbicacion(
+                    service: widget.ubicacion,
+                    obligatorio: true,
+                    enabled: !_cargando,
+                    etiqueta: 'Tu localidad',
+                    onChanged: (_, l) => _localidad = l,
                   ),
                   const SizedBox(height: 20),
                   if (_error != null)
@@ -276,10 +176,7 @@ class _RegistroPageState extends State<RegistroPage> {
                       ),
                     ),
                   FilledButton(
-                    onPressed:
-                        _cargando || _cargandoProvincias || _provincias.isEmpty
-                        ? null
-                        : _registrar,
+                    onPressed: _cargando ? null : _registrar,
                     child: Text(_cargando ? 'Creando cuenta…' : 'Crear cuenta'),
                   ),
                   TextButton(

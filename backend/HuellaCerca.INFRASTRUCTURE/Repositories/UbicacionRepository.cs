@@ -14,17 +14,23 @@ public sealed class UbicacionRepository(AppDbContext db) : IUbicacionRepository
             .OrderBy(x => x.Nombre).ToListAsync(ct);
     public Task<bool> ProvinciaActivaExisteAsync(Guid id, CancellationToken ct) =>
         db.Provincias.AnyAsync(x => x.Id == id && x.Activa && x.Pais.Activo, ct);
+    public Task<Localidad?> GetLocalidadActivaAsync(Guid id, CancellationToken ct) =>
+        db.Localidades.AsNoTracking().Include(x => x.Provincia)
+            .SingleOrDefaultAsync(x => x.Id == id && x.Activa && x.Provincia.Activa && x.Provincia.Pais.Activo, ct);
     public async Task<(IReadOnlyList<Localidad> Items, int Total)> GetLocalidadesAsync(
-        Guid provinciaId, string? busqueda, int pagina, int tamanoPagina, CancellationToken ct)
+        Guid? provinciaId, string? busqueda, int pagina, int tamanoPagina, CancellationToken ct)
     {
-        var query = db.Localidades.AsNoTracking().Where(x => x.ProvinciaId == provinciaId && x.Activa && x.Provincia.Activa && x.Provincia.Pais.Activo);
-        if (!string.IsNullOrWhiteSpace(busqueda))
-        {
-            var normalized = TextoBusqueda.Normalizar(busqueda);
-            query = query.Where(x => x.NombreBusqueda.Contains(normalized));
-        }
+        var query = db.Localidades.AsNoTracking().Include(x => x.Provincia)
+            .Where(x => x.Activa && x.Provincia.Activa && x.Provincia.Pais.Activo);
+        if (provinciaId is { } provincia) query = query.Where(x => x.ProvinciaId == provincia);
+        var normalized = string.IsNullOrWhiteSpace(busqueda) ? null : TextoBusqueda.Normalizar(busqueda);
+        if (normalized is not null) query = query.Where(x => x.NombreBusqueda.Contains(normalized));
         var total = await query.CountAsync(ct);
-        var items = await query.OrderBy(x => x.Nombre).ThenBy(x => x.Id)
+        // Primero las que empiezan con lo escrito ("La Pl" → La Plata antes que Villa La Plata).
+        var ordenada = normalized is null
+            ? query.OrderBy(x => x.Nombre)
+            : query.OrderBy(x => x.NombreBusqueda.StartsWith(normalized) ? 0 : 1).ThenBy(x => x.Nombre);
+        var items = await ordenada.ThenBy(x => x.Id)
             .Skip((pagina - 1) * tamanoPagina).Take(tamanoPagina).ToListAsync(ct);
         return (items, total);
     }
